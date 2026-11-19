@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace StageManager
 {
-	public class SceneManager
+	public partial class SceneManager
 	{
 		private readonly Desktop _desktop;
 		private readonly DesktopIconsPolicy _desktopIcons;
@@ -108,6 +108,8 @@ namespace StageManager
 			WindowsManager.WindowDestroyed += WindowsManager_WindowDestroyed;
 			WindowsManager.UntrackedFocus += WindowsManager_UntrackedFocus;
 
+			InitializeSnapGroups();
+
 			await WindowsManager.Start();
 		}
 
@@ -130,15 +132,143 @@ namespace StageManager
 
 		private void WindowsManager_WindowUpdated(IWindow window, WindowUpdateType type)
 		{
+			// TEMPORARY: events that matter for snap groups
+			if (type is WindowUpdateType.Foreground or WindowUpdateType.MoveStart or WindowUpdateType.MoveEnd
+				or WindowUpdateType.MinimizeStart or WindowUpdateType.MinimizeEnd)
+				DebugLog.Write("EVENT", $"{type} suspend={_suspend} {DebugLog.Describe(window.Handle)} {DebugLog.State(window.Handle)}");
+
+			// minimizing the active window makes Windows hand the focus to another one
+			if (type == WindowUpdateType.MinimizeStart)
+				_focus.Vanished(window.Handle.ToInt64());
+
 			if (_suspend)
+			{
+				if (type == WindowUpdateType.Foreground)
+					_focus.Activated(window.Handle.ToInt64());
+
 				return;
+			}
 
 			if (type == WindowUpdateType.Foreground)
-				SwitchToSceneByWindow(window).SafeFireAndForget();
+			{
+				var handoff = IsFocusHandoff(window);
+				_focus.Activated(window.Handle.ToInt64());
+
+				if (handoff)
+				{
+					// Windows gave the focus to a window out of sight because the active one vanished: the stage stays, its front window gets the focus
+					DebugLog.Write("FOCUS", $"handoff to {DebugLog.Describe(window.Handle)} ignored, the stage keeps the focus");
+					FocusStage();
+					return;
+				}
+
+				// the window may have been snapped next to the windows of the stage, then it joins them instead of switching
+				HandleForeground(window);
+				return;
+			}
+
+			switch (type)
+			{
+				case WindowUpdateType.MoveStart:
+					HandleSnapGroupMoveStart(window);
+					break;
+				case WindowUpdateType.MoveEnd:
+					HandleSnapGroupLocationChanged(window, isMoveEnd: true);
+					break;
+				case WindowUpdateType.LocationChanged:
+					HandleSnapGroupLocationChanged(window, isMoveEnd: false);
+					HandlePossibleSnapAssistPlacement(window);
+					break;
+				case WindowUpdateType.MinimizeEnd:
+					HandlePossibleSnapAssistPlacement(window);
+					break;
+			}
+		}
+
+		private readonly FocusHandoff _focus = new();
+
+		private bool IsFocusHandoff(IWindow window)
+		{
+			var current = _current;
+			if (current is null)
+				return false;
+
+			return _focus.IsHandoff(
+				targetOnScreen: IsOnScreen(window.Handle),
+				targetInCurrentScene: current.Windows.Any(w => w.Handle == window.Handle),
+				currentSceneHasWindowOnScreen: current.Windows.Any(w => IsOnScreen(w.Handle)));
+		}
+
+		/// <summary>
+		/// Visible on a monitor: not hidden, not minimized and not out of the screen. Decided by where the window is, not by whether it is
+		/// parked: Windows or the user may have put a parked window on the screen, and a window that was just brought back may still be
+		/// on its way (the move is asynchronous).
+		/// </summary>
+		private static bool IsOnScreen(IntPtr handle)
+		{
+			if (!Win32.IsWindowVisible(handle) || Win32.IsIconic(handle))
+				return false;
+
+			return WindowGeometry.FrameOf(handle) is Area frame
+				&& System.Windows.Forms.Screen.AllScreens.Any(s => FlightPlanner.Intersects(new Area(s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom), frame));
+		}
+
+		/// <summary>Gives the focus to the front window of the stage that is on the screen.</summary>
+		private void FocusStage()
+		{
+			var scene = _current;
+			if (scene is null)
+				return;
+
+			var onScreen = scene.Windows.Where(w => IsOnScreen(w.Handle)).ToList();
+			if (onScreen.Count == 0)
+				return;
+
+			var topToBottom = WindowStack.TopToBottom().ToList();
+			var front = onScreen
+				.OrderBy(w => topToBottom.IndexOf(w.Handle.ToInt64()) is var i && i >= 0 ? i : int.MaxValue)
+				.First();
+
+			DebugLog.Write("FOCUS", $"focus the stage: {DebugLog.Describe(front.Handle)}");
+
+			// not right inside the event of the other window, Windows may still be busy handing the focus on
+			System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => front.Focus());
+		}
+
+		/// <summary>
+		/// After a switch the focus may rest on a window out of sight: Windows hands it on when the active window is hidden. Typing would
+		/// go to a window nobody sees, so the front window of the stage takes it. Waits a moment, because Windows does not hand it on at once.
+		/// </summary>
+		private async Task FocusStageIfStranded(Scene scene)
+		{
+			await Task.Delay(250).ConfigureAwait(true);
+
+			if (!ReferenceEquals(_current, scene) || IsSwitching)
+				return;
+
+			var foreground = Win32.GetForegroundWindow();
+			var active = GetSceneableWindows()?.FirstOrDefault(w => w.Handle == foreground);
+
+			// the sidebar, the taskbar or the desktop: not a window out of sight
+			if (active is null)
+				return;
+
+			if (FocusHandoff.IsStranded(
+				activeOnScreen: IsOnScreen(active.Handle),
+				activeInCurrentScene: scene.Windows.Any(w => w.Handle == active.Handle),
+				currentSceneHasWindowOnScreen: scene.Windows.Any(w => IsOnScreen(w.Handle))))
+			{
+				DebugLog.Write("FOCUS", $"after the switch the focus rests on {DebugLog.Describe(active.Handle)} out of sight");
+				FocusStage();
+			}
 		}
 
 		private void WindowsManager_UntrackedFocus(object? sender, IntPtr e)
 		{
+			// raised for any event of a window that is not tracked, only a real focus change counts
+			if (Win32.GetForegroundWindow() == e)
+				_focus.Activated(e.ToInt64());
+
 			if (_suspend)
 				return;
 
@@ -152,6 +282,10 @@ namespace StageManager
 
 		private void WindowsManager_WindowDestroyed(IWindow window)
 		{
+			// a closed or hidden window that was active makes Windows hand the focus to another one
+			if (!Win32.IsWindow(window.Handle) || !Win32.IsWindowVisible(window.Handle))
+				_focus.Vanished(window.Handle.ToInt64());
+
 			// a window that only hides or cloaks itself (Windows Terminal does) still exists. StageManager forgets it, so it must not
 			// stay out of the screen: once it shows again nobody would bring it back
 			if (Win32.IsWindow(window.Handle))
@@ -163,11 +297,16 @@ namespace StageManager
 			if (removal.GroupId is not Guid id || !_sceneById.TryGetValue(id, out var scene))
 				return;
 
+			DebugLog.Write("REMOVE", $"{DebugLog.Describe(window.Handle)} groupRemoved={removal.GroupRemoved}");
+
 			scene.Remove(window);
 
 			if (!removal.GroupRemoved)
 			{
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(scene, window, ChangeType.Updated));
+
+				// a snap group of one window is no layout any more
+				DissolveIfTooSmall(scene, switchToRemainingWindow: ReferenceEquals(scene, _current));
 			}
 			else
 			{
@@ -289,8 +428,19 @@ namespace StageManager
 				await _flight.ConfigureAwait(true);
 			}
 
+			// windows that were closed to the tray or destroyed without an event are forgotten first, so that they cannot come back
+			WindowsManager.ForgetVanishedWindows();
+
+			if (scene is object && _scenes?.Contains(scene) != true)
+			{
+				DebugLog.Write("SWITCH", $"skipped, all windows of the scene are gone: {DescribeScene(scene)}");
+				return;
+			}
+
 			if (!_registry.TrySwitch(scene?.Id))
 				return;
+
+			DebugLog.Write("SWITCH", $"{DescribeScene(_current)} -> {DescribeScene(scene)}");
 
 			IsDesktopView = scene is null;
 
@@ -308,6 +458,10 @@ namespace StageManager
 				// the scene that leaves keeps the order its windows lie on the screen, its card and its next return show them that way
 				if (prior is object)
 					KeepScreenOrder(prior);
+
+				// a snap group remembers its exact layout before its windows leave the screen
+				if (prior is object && IsSnapGroup(prior))
+					CaptureLayout(prior);
 				_current = scene;
 
 				foreach (var s in _scenes)
@@ -337,7 +491,29 @@ namespace StageManager
 			{
 				takeoff.TrySetResult();
 				_suspend = false;
+
+				// windows that were parked or brought back may still be moving (asynchronously): that is no change of a layout
+				QuietLayoutChecks();
+				LogSceneLater(scene);
 			}
+
+			if (scene is object)
+				FocusStageIfStranded(scene).SafeFireAndForget(ex => Log.Error("Focusing the stage failed", ex));
+		}
+
+		/// <summary>TEMPORARY: the state of the windows on the stage once the switch has settled.</summary>
+		private static void LogSceneLater(Scene? scene)
+		{
+			if (scene is null || !DebugLog.Enabled)
+				return;
+
+			var handles = scene.Windows.Select(w => w.Handle).ToArray();
+			Task.Run(async () =>
+			{
+				await Task.Delay(800).ConfigureAwait(false);
+				foreach (var h in handles)
+					DebugLog.Write("STAGE", $"{DebugLog.Describe(h)} {DebugLog.State(h)}");
+			});
 		}
 
 		private Task _takeoff = Task.CompletedTask;
@@ -552,11 +728,16 @@ namespace StageManager
 		private void ShowInOrder(IEnumerable<IWindow> backToFront)
 		{
 			var windows = backToFront.ToList();
+			var minimized = windows.Where(w => Win32.IsIconic(w.Handle)).Select(w => w.Handle).ToHashSet();
 
 			foreach (var w in windows)
 				WindowStrategy.Show(w);
 
 			WindowStack.Restack(windows.Select(w => w.Handle));
+
+			// a snap group whose windows were minimized (they could not be parked) gets its exact layout back
+			if (windows.Count > 0 && FindSceneForWindow(windows[0]) is Scene scene && IsSnapGroup(scene))
+				RestoreSnapLayout(scene, minimized);
 		}
 
 		public Task MoveWindow(Scene sourceScene, IWindow window, Scene targetScene)
@@ -583,6 +764,10 @@ namespace StageManager
 					_scenes.Remove(sourceScene);
 					_sceneById.Remove(sourceScene.Id);
 					SceneChanged?.Invoke(this, new SceneChangedEventArgs(sourceScene, window, ChangeType.Removed));
+				}
+				else
+				{
+					DissolveIfTooSmall(sourceScene, switchToRemainingWindow: ReferenceEquals(sourceScene, _current));
 				}
 
 				if (targetScene.Equals(_current))
@@ -739,6 +924,9 @@ namespace StageManager
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(scene, windows.FirstOrDefault(), ChangeType.Updated));
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(created, windows.FirstOrDefault(), ChangeType.Created));
 
+				// a snap group of one window is no layout any more
+				DissolveIfTooSmall(scene, switchToRemainingWindow: ReferenceEquals(scene, _current));
+
 				// an app that leaves the stage is no longer shown
 				if (scene.Equals(_current))
 				{
@@ -819,6 +1007,10 @@ namespace StageManager
 		/// <summary>The windows that decide if the sidebar has to get out of the way. Parked windows are not on the screen, they do not count.</summary>
 		public IEnumerable<IWindow> GetCurrentWindows() =>
 			(_current?.Windows ?? GetSceneableWindows()).Where(w => !Parking.IsParked(w.Handle));
+
+		// TEMPORARY: logging helper
+		private static string DescribeScene(Scene? scene) =>
+			scene is null ? "<desktop>" : $"[{string.Join(", ", scene.Windows.Select(w => DebugLog.Describe(w.Handle)))}]";
 
 		public static string GroupKeyOf(IWindow window) =>
 			string.IsNullOrEmpty(window.AppKey) ? window.ProcessName.ToUpperInvariant() : window.AppKey;

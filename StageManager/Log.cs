@@ -13,6 +13,8 @@ namespace StageManager
 
 		public static void Warn(string message) => Write("WARN ", message);
 
+		public static void Debug(string message) => Write("DEBUG", message);
+
 		public static void Error(string message, Exception? exception = null) =>
 			Write("ERROR", exception is null ? message : $"{message}{Environment.NewLine}{exception}");
 

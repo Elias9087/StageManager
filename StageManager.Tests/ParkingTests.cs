@@ -360,6 +360,47 @@ public class WindowParkerTests
 	}
 
 	[Fact]
+	public void A_normal_window_is_parked_the_same_way_if_maximized_windows_are_moved_as_they_are()
+	{
+		Create();
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+
+		Assert.True(p.Park(1));
+		Assert.True(_placer.Windows[1].Rect.Right < 0);
+		Assert.Equal(Rect.Width, _placer.Windows[1].Rect.Width);
+	}
+
+	[Fact]
+	public void A_maximized_window_can_be_moved_without_leaving_the_maximized_state()
+	{
+		CreateMaximized(Rect);
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+
+		Assert.True(p.Park(1));
+
+		Assert.True(_placer.IsMaximized(1));
+		Assert.True(_placer.Moves[^1].Rect.Right < 0);
+		Assert.False(_journal.Entries[0].Maximized);
+		Assert.Null(_journal.Entries[0].Restored);
+	}
+
+	[Fact]
+	public void A_maximized_window_that_was_moved_as_it_is_is_moved_back_and_not_maximized_again()
+	{
+		CreateMaximized(Rect);
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+		p.Park(1);
+
+		// the fake keeps maximized windows in place, as if Windows had moved it out: put it out of the screen for the return
+		_placer.Windows[1] = _placer.Windows[1] with { Rect = _placer.Moves[^1].Rect };
+
+		Assert.True(p.Unpark(1));
+
+		Assert.Empty(_placer.Maximizes);
+		Assert.Equal(FakePlacer.MaximizedRect, _placer.Moves[^1].Rect);
+	}
+
+	[Fact]
 	public void A_maximized_window_a_killed_run_left_behind_comes_back_maximized()
 	{
 		CreateMaximized(Rect).Park(1);

@@ -114,7 +114,8 @@ namespace StageManager.Native
 	public static class Parking
 	{
 		private static readonly Lazy<WindowParker> Instance = new(() =>
-			new WindowParker(new Win32WindowPlacer(), new FileParkingJournal(Path.Combine(AppPaths.DataDirectory, "parked-windows.json"))));
+			// maximized windows are moved as they are: maximizing them again when they come back makes Chromium based windows black for a moment
+			new WindowParker(new Win32WindowPlacer(), new FileParkingJournal(Path.Combine(AppPaths.DataDirectory, "parked-windows.json")), MaximizedParking.MoveMaximized));
 
 		public static bool IsParked(IntPtr window) => Instance.Value.IsParked(window.ToInt64());
 

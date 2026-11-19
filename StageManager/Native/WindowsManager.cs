@@ -81,7 +81,8 @@ namespace StageManager.Native
 			_currentProcessId = currentProcess.Id;
 			_currentProcessWindowHandle = currentProcess.MainWindowHandle;
 
-			Win32.SetWinEventHook(Win32.EVENT_CONSTANTS.EVENT_OBJECT_DESTROY, Win32.EVENT_CONSTANTS.EVENT_OBJECT_SHOW, IntPtr.Zero, _hookDelegate, 0, 0, 0);
+			// DESTROY, SHOW and HIDE: apps that "close to the tray" only hide their window
+			Win32.SetWinEventHook(Win32.EVENT_CONSTANTS.EVENT_OBJECT_DESTROY, Win32.EVENT_CONSTANTS.EVENT_OBJECT_HIDE, IntPtr.Zero, _hookDelegate, 0, 0, 0);
 			Win32.SetWinEventHook(Win32.EVENT_CONSTANTS.EVENT_OBJECT_CLOAKED, Win32.EVENT_CONSTANTS.EVENT_OBJECT_UNCLOAKED, IntPtr.Zero, _hookDelegate, 0, 0, 0);
 			Win32.SetWinEventHook(Win32.EVENT_CONSTANTS.EVENT_SYSTEM_MINIMIZESTART, Win32.EVENT_CONSTANTS.EVENT_SYSTEM_MINIMIZEEND, IntPtr.Zero, _hookDelegate, 0, 0, 0);
 			Win32.SetWinEventHook(Win32.EVENT_CONSTANTS.EVENT_SYSTEM_MOVESIZESTART, Win32.EVENT_CONSTANTS.EVENT_SYSTEM_MOVESIZEEND, IntPtr.Zero, _hookDelegate, 0, 0, 0);
@@ -168,6 +169,9 @@ namespace StageManager.Native
 						break;
 					case Win32.EVENT_CONSTANTS.EVENT_OBJECT_DESTROY:
 						UnregisterWindow(hwnd);
+						break;
+					case Win32.EVENT_CONSTANTS.EVENT_OBJECT_HIDE:
+						HandleWindowHidden(hwnd);
 						break;
 					case Win32.EVENT_CONSTANTS.EVENT_OBJECT_CLOAKED:
 						UpdateWindow(hwnd, WindowUpdateType.Hide);
@@ -297,6 +301,47 @@ namespace StageManager.Native
 			}
 		}
 
+		/// <summary>
+		/// Apps that "close to the tray" (Teams) only hide their window instead of destroying it. Such a window is forgotten like a
+		/// closed one, otherwise its card would stay and a scene switch could show it again. Once the app shows it again, it is
+		/// registered as a new window.
+		/// </summary>
+		private void HandleWindowHidden(IntPtr handle)
+		{
+			if (!_active || !_windows.TryGetValue(handle, out var window))
+				return;
+
+			// the event is delivered asynchronously, the window may be visible again already
+			if (window.DidManualHide || Win32.IsWindowVisible(handle))
+			{
+				DebugLog.Write("HIDDEN", $"ignored {DebugLog.Describe(handle)} manualHide={window.DidManualHide} visible={Win32.IsWindowVisible(handle)}");
+				return;
+			}
+
+			DebugLog.Write("HIDDEN", $"forget {DebugLog.Describe(handle)} {DebugLog.State(handle)}");
+			UnregisterWindow(handle);
+		}
+
+		/// <summary>
+		/// Forgets the windows that were destroyed or hidden by their app without the matching event being received.
+		/// Windows hidden by StageManager itself stay. Minimized windows count as visible.
+		/// </summary>
+		public void ForgetVanishedWindows()
+		{
+			if (!_active)
+				return;
+
+			var vanished = _windows.Values
+				.Where(w => !w.DidManualHide && (!Win32.IsWindow(w.Handle) || !Win32.IsWindowVisible(w.Handle)))
+				.ToList();
+
+			foreach (var window in vanished)
+			{
+				DebugLog.Write("PRUNE", $"forget {DebugLog.Describe(window.Handle)} {DebugLog.State(window.Handle)}");
+				UnregisterWindow(window.Handle);
+			}
+		}
+
 		private void UpdateWindow(IntPtr handle, WindowUpdateType type)
 		{
 			if (!_active)
@@ -368,12 +413,14 @@ namespace StageManager.Native
 			if (!_active)
 				return;
 
-			if (_mouseMoveWindow != null && _windows.ContainsKey(handle))
-			{
-				var window = _windows[handle];
-				if (_mouseMoveWindow == window)
-					WindowUpdated?.Invoke(window, WindowUpdateType.Move);
-			}
+			if (!_windows.TryGetValue(handle, out var window))
+				return;
+
+			if (_mouseMoveWindow != null && _mouseMoveWindow == window)
+				WindowUpdated?.Invoke(window, WindowUpdateType.Move);
+
+			// for every tracked window, also for snapping with the keyboard or Snap Assist and for neighbours resized along with a snapped window
+			WindowUpdated?.Invoke(window, WindowUpdateType.LocationChanged);
 		}
 
 		private void HandleWindowFocused(IWindow window)

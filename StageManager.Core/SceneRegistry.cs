@@ -18,6 +18,26 @@ public readonly record struct MoveResult(Guid SourceId, bool SourceRemoved);
 /// <param name="Windows">The windows that moved from the merged group into the target.</param>
 public readonly record struct MergeResult(IReadOnlyList<long> Windows);
 
+/// <param name="GroupId">The new snap group.</param>
+/// <param name="RemovedGroups">The groups that became empty because all their windows went into the snap group.</param>
+public readonly record struct SnapGroupResult(Guid GroupId, IReadOnlyList<Guid> RemovedGroups);
+
+/// <param name="SourceId">The group the window left.</param>
+/// <param name="SourceRemoved">The group the window left became empty and is gone.</param>
+/// <param name="TargetId">The group of the app of the window.</param>
+/// <param name="TargetCreated">The app had no group, it was opened for the window.</param>
+public readonly record struct HomeResult(long Window, Guid SourceId, bool SourceRemoved, Guid TargetId, bool TargetCreated);
+
+/// <summary>What holds a group together.</summary>
+public enum GroupKind
+{
+	/// <summary>The windows of one or more apps. New windows of these apps join it.</summary>
+	Apps,
+
+	/// <summary>Windows arranged together with the snap feature of Windows. New windows never join it, they go to the group of their app.</summary>
+	SnapGroup
+}
+
 /// <param name="NewGroupId">The group the app has on its own now.</param>
 /// <param name="Windows">The windows of the app.</param>
 public readonly record struct SplitResult(Guid NewGroupId, IReadOnlyList<long> Windows);
@@ -32,6 +52,11 @@ public sealed class SceneRegistry
 	private sealed class Group
 	{
 		public Guid Id { get; } = Guid.NewGuid();
+
+		public GroupKind Kind { get; init; } = GroupKind.Apps;
+
+		/// <summary>The monitor of a snap group, it only takes windows of that monitor. 0 for other groups.</summary>
+		public long Monitor { get; init; }
 
 		public List<string> Keys { get; } = new();
 
@@ -208,6 +233,99 @@ public sealed class SceneRegistry
 		return new SplitResult(created.Id, moved);
 	}
 
+	/// <summary>
+	/// Puts windows that were snapped together into a new snap group, at the place of the group of the first window.
+	/// The windows keep their apps, groups that become empty are removed.
+	/// </summary>
+	/// <returns>Null if less than two of the windows are known.</returns>
+	public SnapGroupResult? CreateSnapGroup(IReadOnlyList<long> windows, long monitor)
+	{
+		var known = windows.Distinct().Where(w => FindGroupOf(w) is not null).ToList();
+		if (known.Count < 2)
+			return null;
+
+		var created = new Group { Kind = GroupKind.SnapGroup, Monitor = monitor };
+		var index = _groups.IndexOf(FindGroupOf(known[0])!);
+		var removed = new List<Guid>();
+
+		foreach (var window in known)
+		{
+			var source = FindGroupOf(window)!;
+			var key = _keyOfWindow.GetValueOrDefault(window);
+
+			source.Windows.Remove(window);
+			DropKeyIfUnused(source, key);
+
+			created.Windows.Add(window);
+			if (key is not null && !created.HasKey(key))
+				created.Keys.Add(key);
+
+			if (source.Windows.Count == 0)
+			{
+				var at = _groups.IndexOf(source);
+				_groups.Remove(source);
+				removed.Add(source.Id);
+
+				if (at < index)
+					index--;
+			}
+		}
+
+		_groups.Insert(Math.Clamp(index, 0, _groups.Count), created);
+		return new SnapGroupResult(created.Id, removed);
+	}
+
+	/// <summary>
+	/// Takes a window out of its snap group and puts it into the group of its app, or opens one for it right after the snap group.
+	/// </summary>
+	/// <returns>Null if the window is unknown or not in a snap group: it is home already.</returns>
+	public HomeResult? ReturnHome(long window)
+	{
+		var source = FindGroupOf(window);
+		if (source is null || source.Kind != GroupKind.SnapGroup)
+			return null;
+
+		var key = _keyOfWindow.GetValueOrDefault(window) ?? "";
+
+		var target = FindByKey(key);
+		var targetCreated = target is null;
+		if (target is null)
+		{
+			target = new Group();
+			target.Keys.Add(key);
+			_groups.Insert(_groups.IndexOf(source) + 1, target);
+		}
+
+		source.Windows.Remove(window);
+		DropKeyIfUnused(source, key);
+		target.Windows.Add(window);
+
+		var sourceRemoved = source.Windows.Count == 0;
+		if (sourceRemoved)
+			_groups.Remove(source);
+
+		return new HomeResult(window, source.Id, sourceRemoved, target.Id, targetCreated);
+	}
+
+	/// <summary>A snap group of less than two windows is no layout any more: its windows go back to the groups of their apps.</summary>
+	public IReadOnlyList<HomeResult> DissolveIfTooSmall(Guid group)
+	{
+		var snap = _groups.FirstOrDefault(g => g.Id == group);
+		if (snap is null || snap.Kind != GroupKind.SnapGroup || snap.Windows.Count >= 2)
+			return Array.Empty<HomeResult>();
+
+		return snap.Windows.ToList()
+			.Select(ReturnHome)
+			.Where(r => r is not null)
+			.Select(r => r!.Value)
+			.ToList();
+	}
+
+	public GroupKind? KindOf(Guid group) => _groups.FirstOrDefault(g => g.Id == group)?.Kind;
+
+	/// <summary>The monitor of a snap group, 0 for other groups or unknown ones.</summary>
+	public long MonitorOf(Guid group) => _groups.FirstOrDefault(g => g.Id == group)?.Monitor ?? 0;
+
 	/// <summary>Selects a scene. Null selects the desktop view.</summary>
 	/// <returns>False if the scene is selected already or an app switched back right after it was hidden.</returns>
 	public bool TrySwitch(Guid? target)
@@ -250,7 +368,8 @@ public sealed class SceneRegistry
 
 	private Group? FindGroupOf(long window) => _groups.FirstOrDefault(g => g.Windows.Contains(window));
 
-	private Group? FindByKey(string key) => _groups.FirstOrDefault(g => g.HasKey(key));
+	/// <summary>The group new windows of an app join. Snap groups never take new windows.</summary>
+	private Group? FindByKey(string key) => _groups.FirstOrDefault(g => g.Kind == GroupKind.Apps && g.HasKey(key));
 
 	private static bool SameKey(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 

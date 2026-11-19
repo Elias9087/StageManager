@@ -35,6 +35,7 @@ namespace StageManager
 		public void Remove(IWindow window)
 		{
 			_windows.Remove(window);
+			Layout.Remove(window.Handle);
 			UpdateTitle();
 		}
 
@@ -97,6 +98,12 @@ namespace StageManager
 		}
 
 		public bool HasFocus => Windows.Any(w => w.IsFocused);
+
+		/// <summary>
+		/// The window rectangles (as GetWindowRect and SetWindowPos use them) of the windows of a snap group that form its layout.
+		/// Stored to bring the layout back exactly and to find out whether a window was dragged out of it. Empty for other scenes.
+		/// </summary>
+		public Dictionary<IntPtr, StageManager.Core.Area> Layout { get; } = new();
 
 		public string Key { get; }
 	}

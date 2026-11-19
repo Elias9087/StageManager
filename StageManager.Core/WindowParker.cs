@@ -123,6 +123,20 @@ public sealed class FileParkingJournal : IParkingJournal
 	}
 }
 
+/// <summary>How maximized windows are parked.</summary>
+public enum MaximizedParking
+{
+	/// <summary>The window leaves the maximized state, is moved and maximized again when it comes back.</summary>
+	Normalize,
+
+	/// <summary>
+	/// The window is moved as it is, still maximized. Nothing is resized, so Chromium based windows (Electron apps like Claude) do not
+	/// show a black area when they come back, which they do after being maximized again. Tested on Windows 11: the window stays out of
+	/// the screen and maximized.
+	/// </summary>
+	MoveMaximized
+}
+
 /// <summary>
 /// Hides windows by moving them out of the screen and brings them back. Unlike minimizing, this keeps the picture
 /// DWM shows of a window: Chromium based windows lose theirs when they are minimized.
@@ -131,13 +145,15 @@ public sealed class WindowParker
 {
 	private readonly IWindowPlacer _placer;
 	private readonly IParkingJournal _journal;
+	private readonly MaximizedParking _maximizedParking;
 	private readonly object _lock = new();
 	private readonly List<ParkedWindow> _entries = new();
 
-	public WindowParker(IWindowPlacer placer, IParkingJournal journal)
+	public WindowParker(IWindowPlacer placer, IParkingJournal journal, MaximizedParking maximizedParking = MaximizedParking.Normalize)
 	{
 		_placer = placer ?? throw new ArgumentNullException(nameof(placer));
 		_journal = journal ?? throw new ArgumentNullException(nameof(journal));
+		_maximizedParking = maximizedParking;
 	}
 
 	public int Count
@@ -191,8 +207,13 @@ public sealed class WindowParker
 			var dx = spot.Left - rect.Left;
 			var dy = spot.Top - rect.Top;
 
-			// Windows does not move a maximized window, it has to leave that state first
+			// with Normalize a maximized window leaves that state before it is moved and is maximized again when it comes back
 			var maximized = _placer.IsMaximized(window);
+
+			// moved as it is: it keeps the maximized state on its own and only has to be moved back
+			if (maximized && _maximizedParking == MaximizedParking.MoveMaximized)
+				maximized = false;
+
 			Area? restored = null;
 			if (maximized && (restored = _placer.GetRestoredRect(window)) is null)
 				return false;

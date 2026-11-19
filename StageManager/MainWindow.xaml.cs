@@ -87,6 +87,13 @@ namespace StageManager
 		{
 			base.OnSourceInitialized(e);
 
+			// a tool window does not show up in Alt+Tab and Win+Tab, and Windows does not take it for an app window: Snap Assist
+			// offers the half of the screen next to the sidebar again
+			var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+			var exStyle = (Win32.GetWindowExStyleLongPtr(handle) | Win32.WS_EX.WS_EX_TOOLWINDOW) & ~Win32.WS_EX.WS_EX_APPWINDOW;
+			Win32.SetWindowStyleExLongPtr(handle, exStyle);
+			DebugLog.Write("SIDEBAR", $"ex style set to 0x{(long)Win32.GetWindowExStyleLongPtr(handle):X}");
+
 			// the Explorer broadcasts this message after a restart, the desktop icons may be visible again then
 			_taskbarCreatedMessage = Win32.RegisterWindowMessage("TaskbarCreated");
 			((System.Windows.Interop.HwndSource)PresentationSource.FromVisual(this)).AddHook(WndProc);

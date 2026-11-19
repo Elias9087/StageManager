@@ -19,23 +19,47 @@ namespace StageManager.Strategies
 			// whatever way it was hidden, it comes back: parked windows are moved back, minimized ones are restored
 			if (Parking.IsParked(window.Handle))
 			{
+				DebugLog.Write("SHOW", $"unpark {DebugLog.Describe(window.Handle)} before: {DebugLog.State(window.Handle)}");
 				Parking.Unpark(window.Handle);
 
 				// the window kept its place in the stack while it was out of the screen, the ones of a scene end up above the others
 				Win32.SetWindowPos(window.Handle, Win32.HWND_TOP, 0, 0, 0, 0,
 					Win32.SetWindowPosFlags.IgnoreMove | Win32.SetWindowPosFlags.IgnoreResize | Win32.SetWindowPosFlags.DoNotActivate);
+
+				DebugLog.StateNowAndLater("SHOW", "unparked", window.Handle);
 				return;
 			}
 
+			var minimized = Win32.IsIconic(window.Handle);
+			if (minimized)
+				DebugLog.Write("SHOW", $"restore {DebugLog.Describe(window.Handle)} before: {DebugLog.State(window.Handle)}");
+
 			_minimize.Show(window);
+
+			if (minimized)
+				DebugLog.StateNowAndLater("SHOW", "restored", window.Handle);
 		}
 
 		public void Hide(IWindow window)
 		{
-			if (App.Settings.Current.HideStrategy == HideStrategy.Park && Parking.Park(window.Handle))
+			// a window its app has hidden (closed to the tray) is not on the screen, it must neither be moved nor minimized
+			if (!Win32.IsWindowVisible(window.Handle))
 				return;
 
+			// minimized or parked already: nothing changes
+			if (Win32.IsIconic(window.Handle) || Parking.IsParked(window.Handle))
+				return;
+
+			DebugLog.Write("HIDE", $"{App.Settings.Current.HideStrategy} {DebugLog.Describe(window.Handle)} before: {DebugLog.State(window.Handle)}");
+
+			if (App.Settings.Current.HideStrategy == HideStrategy.Park && Parking.Park(window.Handle))
+			{
+				DebugLog.StateNowAndLater("HIDE", "parked", window.Handle);
+				return;
+			}
+
 			_minimize.Hide(window);
+			DebugLog.StateNowAndLater("HIDE", "minimized", window.Handle);
 		}
 	}
 }
