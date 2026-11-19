@@ -123,4 +123,5 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>Otomatik (masaüstüne tıklayınca görünür)</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>StageManager&apos;ın masaüstündeki simgeleri ne zaman gizleyeceği. macOS&apos;taki gibi masaüstüne tıklamak tüm pencereleri kenara çeker ve simgeleri gösterir.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager zaten çalışıyor. Simgesini bildirim alanında arayın.</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} yönetici olarak çalışıyor. StageManager kendisi yönetici olarak çalışana kadar bu uygulamanın pencerelerini taşıyamaz ve onlara dokunmaz.</value></data>
 </root>

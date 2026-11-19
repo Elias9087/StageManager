@@ -385,6 +385,28 @@ public class WindowParkerTests
 	}
 
 	[Fact]
+	public void A_maximized_window_parked_as_it_is_remembers_its_place_and_its_parking_spot()
+	{
+		// the check for windows that refuse to move compares the window with these two
+		CreateMaximized(Rect);
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+		p.Park(1);
+
+		Assert.Equal(FakePlacer.MaximizedRect, p.OriginalRectOf(1));
+		Assert.Equal(_placer.Moves[^1].Rect, p.ParkedRectOf(1));
+		Assert.True(p.ParkedRectOf(1)!.Value.Right < 0);
+		Assert.False(Elevation.RefusedToMove(p.OriginalRectOf(1)!.Value, p.ParkedRectOf(1)!.Value, p.ParkedRectOf(1)!.Value, hung: false));
+	}
+
+	[Fact]
+	public void A_window_that_is_not_parked_has_no_parking_spot()
+	{
+		var p = Create();
+
+		Assert.Null(p.ParkedRectOf(1));
+	}
+
+	[Fact]
 	public void A_maximized_window_that_was_moved_as_it_is_is_moved_back_and_not_maximized_again()
 	{
 		CreateMaximized(Rect);

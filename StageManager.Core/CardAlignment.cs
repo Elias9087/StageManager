@@ -41,4 +41,51 @@ public static class CardShape
 
 		return Math.Clamp(tallest + inset, Math.Min(MinHeight, maxHeight), maxHeight);
 	}
+
+	/// <summary>Width of an app icon below the card, with its gap.</summary>
+	public const double IconWidth = 31;
+
+	/// <summary>Width of the close button below the card, with a gap to the icons.</summary>
+	public const double CloseButtonWidth = 26;
+
+	/// <summary>
+	/// How wide the row of icons and the close button below a card is: from the screen edge to the far edge of the windows as they are
+	/// drawn on the card. A narrow window leaves room beside it, the close button must sit next to the window and not out in that room,
+	/// otherwise the pointer leaves the card on its way there. Never narrower than the icons and the button need.
+	/// </summary>
+	/// <param name="cardWidth">Width of the card.</param>
+	/// <param name="cardHeight">Height of the card, as <see cref="Height"/> worked it out.</param>
+	/// <param name="backToFront">Width and height of each window of the card, back to front. 0 for a window of unknown size.</param>
+	/// <param name="maxVisible">How many of the windows show as thumbnails, the frontmost ones.</param>
+	/// <param name="alignX">Where the windows sit on the card, see <see cref="CardAlignment.X"/>: 0 at the left screen edge, 1 at the right.</param>
+	/// <param name="icons">Number of icons in the row.</param>
+	public static double IconRowWidth(double cardWidth, double cardHeight, IReadOnlyList<(double Width, double Height)> backToFront, int maxVisible, double alignX, int icons)
+	{
+		if (backToFront.Count == 0 || !(cardWidth > 0))
+			return Math.Max(0, cardWidth);
+
+		var slots = ThumbnailStack.Calculate(cardWidth, cardHeight, backToFront.Count, maxVisible);
+		var left = double.MaxValue;
+		var right = double.MinValue;
+
+		for (var i = 0; i < slots.Length; i++)
+		{
+			var slot = slots[i];
+			if (!slot.IsVisible)
+				continue;
+
+			var fit = AspectFit.Calculate(slot.Width, slot.Height, backToFront[i].Width, backToFront[i].Height, alignX, 1);
+			left = Math.Min(left, slot.OffsetX + fit.X);
+			right = Math.Max(right, slot.OffsetX + fit.X + fit.Width);
+		}
+
+		if (left > right)
+			return cardWidth;
+
+		// measured from the screen edge, where the windows and the icons sit
+		var width = alignX < 0.5 ? right : cardWidth - left;
+		var needed = Math.Max(0, icons) * IconWidth + CloseButtonWidth;
+
+		return Math.Clamp(Math.Max(width, needed), 0, cardWidth);
+	}
 }

@@ -123,4 +123,5 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>自动（单击桌面时显示）</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>StageManager 何时隐藏桌面上的图标。与 macOS 一样，单击桌面会把所有窗口移到一旁并显示图标。</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager 已在运行。请在通知区域查找它的图标。</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} 正以管理员身份运行。StageManager 无法移动其窗口，在 StageManager 本身以管理员身份运行之前不会管理这些窗口。</value></data>
 </root>

@@ -491,6 +491,46 @@ namespace StageManager
 			return true;
 		}
 
+		/// <summary>A card was merged into another one: the stored layout of the windows goes along, the result is a snap group if either was.</summary>
+		private static void TakeOverLayout(Scene source, Scene target)
+		{
+			foreach (var (handle, rect) in source.Layout)
+				target.Layout[handle] = rect;
+		}
+
+		/// <summary>"Separate" on the card of a snap group: the windows of the app go back to the card of their app.</summary>
+		private void SplitAppFromSnapGroup(Scene group, string appKey)
+		{
+			var windows = group.Windows.Where(w => string.Equals(GroupKeyOf(w), appKey, StringComparison.OrdinalIgnoreCase)).ToList();
+			if (windows.Count == 0 || windows.Count == group.Windows.Count())
+				return;
+
+			var wasCurrent = ReferenceEquals(group, _current);
+			DebugLog.Write("SPLIT", $"app {appKey} out of the snap group {DescribeScene(group)}, back to the card of its app");
+
+			try
+			{
+				_suspend = true;
+
+				foreach (var w in windows)
+					_registry.ReturnHome(w.Handle.ToInt64());
+
+				SyncScenes(windows);
+				DissolveIfTooSmall(group, switchToRemainingWindow: wasCurrent);
+
+				// an app that leaves the stage is no longer shown
+				if (wasCurrent)
+				{
+					foreach (var w in windows)
+						WindowStrategy.Hide(w);
+				}
+			}
+			finally
+			{
+				_suspend = false;
+			}
+		}
+
 		/// <summary>
 		/// Stores where the windows of the layout are. Windows that are not on the screen keep their stored place, windows that never
 		/// were snapped (added by dragging a card onto the group) do not become part of the layout.

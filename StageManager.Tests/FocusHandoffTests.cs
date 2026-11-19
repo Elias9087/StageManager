@@ -116,6 +116,55 @@ public class FocusHandoffTests
 		Assert.True(focus.IsHandoff(targetOnScreen: false, targetInCurrentScene: false, currentSceneHasWindowOnScreen: true));
 	}
 
+	[Fact]
+	public void Windows_may_report_the_new_active_window_before_the_old_one_is_minimized()
+	{
+		// 16:25:50: Claude (parked) got the focus, MinimizeStart of Explorer came 76 ms later
+		var focus = Create();
+		focus.Activated(1);
+		Advance(1000);
+		focus.Activated(2);
+		Advance(76);
+		focus.Vanished(1);
+		Advance(74);
+
+		Assert.True(focus.IsHandoff(targetOnScreen: false, targetInCurrentScene: false, currentSceneHasWindowOnScreen: true));
+	}
+
+	[Fact]
+	public void The_previous_window_vanishing_long_after_the_activation_is_no_handoff()
+	{
+		var focus = Create();
+		focus.Activated(1);
+		focus.Activated(2);
+		Advance(1000);
+		focus.Vanished(1);
+
+		Assert.False(focus.IsHandoff(targetOnScreen: false, targetInCurrentScene: false, currentSceneHasWindowOnScreen: true));
+	}
+
+	[Fact]
+	public void Activating_the_same_window_again_keeps_the_previous_one()
+	{
+		var focus = Create();
+		focus.Activated(1);
+		focus.Activated(2);
+		focus.Activated(2);
+		focus.Vanished(1);
+
+		Assert.True(focus.IsHandoff(targetOnScreen: false, targetInCurrentScene: false, currentSceneHasWindowOnScreen: true));
+	}
+
+	[Theory]
+	[InlineData(false, false, true, true)]
+	[InlineData(true, false, true, false)]
+	[InlineData(false, true, true, false)]
+	[InlineData(false, false, false, false)]
+	public void Only_a_window_out_of_sight_and_out_of_the_scene_might_be_a_handoff(bool onScreen, bool inScene, bool sceneHasWindow, bool expected)
+	{
+		Assert.Equal(expected, FocusHandoff.MightBeHandoff(onScreen, inScene, sceneHasWindow));
+	}
+
 	[Theory]
 	[InlineData(false, false, true, true)]
 	[InlineData(true, false, true, false)]

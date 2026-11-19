@@ -85,6 +85,69 @@ namespace StageManager.Native.PInvoke
 
 		public static bool IsHung(IntPtr window) => IsHungAppWindow(window);
 
+		private const uint TOKEN_QUERY = 0x0008;
+		private const int TokenIntegrityLevel = 25;
+
+		[DllImport("advapi32.dll", SetLastError = true)]
+		private static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+
+		[DllImport("advapi32.dll", SetLastError = true)]
+		private static extern bool GetTokenInformation(IntPtr token, int infoClass, IntPtr info, int length, out int returnLength);
+
+		[DllImport("advapi32.dll")]
+		private static extern IntPtr GetSidSubAuthorityCount(IntPtr sid);
+
+		[DllImport("advapi32.dll")]
+		private static extern IntPtr GetSidSubAuthority(IntPtr sid, uint index);
+
+		/// <summary>
+		/// The integrity level of a process (e.g. 0x2000 medium, 0x3000 high for an app that runs as administrator), null if it cannot
+		/// be read. A process of a higher level does not let itself be moved or minimized (UIPI).
+		/// </summary>
+		public static int? IntegrityLevelOf(uint processId)
+		{
+			var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, processId);
+			if (process == IntPtr.Zero)
+				return null;
+
+			try
+			{
+				if (!OpenProcessToken(process, TOKEN_QUERY, out var token))
+					return null;
+
+				try
+				{
+					GetTokenInformation(token, TokenIntegrityLevel, IntPtr.Zero, 0, out var length);
+					if (length <= 0)
+						return null;
+
+					var buffer = Marshal.AllocHGlobal(length);
+					try
+					{
+						if (!GetTokenInformation(token, TokenIntegrityLevel, buffer, length, out _))
+							return null;
+
+						// TOKEN_MANDATORY_LABEL starts with SID_AND_ATTRIBUTES, whose first member is the SID pointer
+						var sid = Marshal.ReadIntPtr(buffer);
+						var count = Marshal.ReadByte(GetSidSubAuthorityCount(sid));
+						return count == 0 ? null : Marshal.ReadInt32(GetSidSubAuthority(sid, (uint)(count - 1)));
+					}
+					finally
+					{
+						Marshal.FreeHGlobal(buffer);
+					}
+				}
+				finally
+				{
+					CloseHandle(token);
+				}
+			}
+			finally
+			{
+				CloseHandle(process);
+			}
+		}
+
 		/// <summary>
 		/// Asks the window for its icon. Gives up after a short time instead of blocking on an app that does not respond.
 		/// </summary>

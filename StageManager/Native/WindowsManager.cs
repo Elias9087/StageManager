@@ -47,6 +47,17 @@ namespace StageManager.Native
 		public event EventHandler<IntPtr> UntrackedFocus;
 
 		/// <summary>
+		/// An app runs with more rights than StageManager (as administrator), its windows cannot be moved and are not managed.
+		/// Raised once per app with a name to show.
+		/// </summary>
+		public event EventHandler<string>? UnmanageableApp;
+
+		private readonly HashSet<IntPtr> _abandoned = new();
+		private readonly HashSet<string> _reportedApps = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<int, bool> _manageableProcesses = new();
+		private int? _ownIntegrityLevel;
+
+		/// <summary>
 		/// Notifies when a window focuses itself
 		/// </summary>
 		public event WindowFocusDelegate WindowFocused;
@@ -79,6 +90,8 @@ namespace StageManager.Native
 
 			var currentProcess = Process.GetCurrentProcess();
 			_currentProcessId = currentProcess.Id;
+			_ownIntegrityLevel = ProcessInfo.IntegrityLevelOf((uint)_currentProcessId);
+			Log.Info($"Integrity level of StageManager: {(_ownIntegrityLevel is int l ? $"0x{l:X}" : "unknown")}");
 			_currentProcessWindowHandle = currentProcess.MainWindowHandle;
 
 			// DESTROY, SHOW and HIDE: apps that "close to the tray" only hide their window
@@ -221,7 +234,8 @@ namespace StageManager.Native
 				if (window.ProcessId < 0 || window.ProcessId == _currentProcessId)
 					return;
 
-				if (window.IsCandidate())
+				// the rights are checked before the list of excluded apps, so the hint shows for an excluded app that runs as administrator too
+				if (window.IsCandidate(ignoreExclusions: true) && IsManageable(window) && window.IsCandidate())
 				{
 					Track(window);
 
@@ -276,7 +290,7 @@ namespace StageManager.Native
 					return true;
 
 				// only the apps that were excluded and are not any more: other windows have their own ways in
-				if (AppIdentity.IsListed(previous, window.ProcessExecutable) && window.IsCandidate())
+				if (AppIdentity.IsListed(previous, window.ProcessExecutable) && window.IsCandidate() && IsManageable(window))
 				{
 					Track(window);
 					added.Add(window);
@@ -286,6 +300,56 @@ namespace StageManager.Native
 			}, IntPtr.Zero);
 
 			return (removed, added);
+		}
+
+		/// <summary>
+		/// False for windows StageManager cannot move: of apps that run with more rights, or windows Windows refused to move before.
+		/// </summary>
+		private bool IsManageable(WindowsWindow window)
+		{
+			if (_abandoned.Contains(window.Handle))
+				return false;
+
+			if (!_manageableProcesses.TryGetValue(window.ProcessId, out var manageable))
+			{
+				var level = ProcessInfo.IntegrityLevelOf((uint)window.ProcessId);
+				manageable = Elevation.CanManage(level, _ownIntegrityLevel);
+				_manageableProcesses[window.ProcessId] = manageable;
+
+				if (!manageable)
+					Log.Info($"Not managed, runs with more rights: {window.ProcessName} (integrity level {(level is int l ? $"0x{l:X}" : "unknown")})");
+			}
+
+			if (!manageable)
+				ReportUnmanageable(window);
+
+			return manageable;
+		}
+
+		private void ReportUnmanageable(IWindow window)
+		{
+			var name = window is WindowsWindow w ? AppInfo.DisplayNameOf(w.ProcessExecutable, w.ProcessName) : window.ProcessName;
+			if (_reportedApps.Add(window.ProcessName))
+				UnmanageableApp?.Invoke(this, name);
+		}
+
+		/// <summary>
+		/// Stops managing a window that Windows refused to move (it was not parked): it would stay on the screen over every other scene.
+		/// It is not tracked again as long as StageManager runs.
+		/// </summary>
+		public void Abandon(IntPtr handle)
+		{
+			if (!_windows.TryGetValue(handle, out var window))
+				return;
+
+			_abandoned.Add(handle);
+			Log.Info($"Not managed any more, Windows refused to move it: {window.ProcessName}");
+
+			// the hint says the app runs as administrator, which is only sure if its rights say so
+			if (_manageableProcesses.TryGetValue(window.ProcessId, out var manageable) && !manageable)
+				ReportUnmanageable(window);
+
+			UnregisterWindow(handle);
 		}
 
 		private void UnregisterWindow(IntPtr handle)
@@ -375,8 +439,29 @@ namespace StageManager.Native
 			}
 			else
 			{
+				// a window that was given up on although its app has no more rights: the user works with it, it is tried once more
+				if (type == WindowUpdateType.Foreground && _abandoned.Contains(handle) && TryManageAgain(handle))
+					return;
+
 				UntrackedFocus?.Invoke(this, handle);
 			}
+		}
+
+		/// <summary>
+		/// Takes a window back that was given up on because it did not move when it was parked, if its app runs with the same rights as
+		/// StageManager: then it should move, the refusal may have been a mistake or a moment the app did not respond. If it refuses
+		/// again, it is given up on again.
+		/// </summary>
+		private bool TryManageAgain(IntPtr handle)
+		{
+			var probe = new WindowsWindow(handle);
+			if (!_manageableProcesses.TryGetValue(probe.ProcessId, out var manageable) || !manageable)
+				return false;
+
+			_abandoned.Remove(handle);
+			Log.Info($"Managed again after it was activated: {probe.ProcessName}");
+			RegisterWindow(handle);
+			return _windows.ContainsKey(handle);
 		}
 
 		private void StartWindowMove(IntPtr handle)

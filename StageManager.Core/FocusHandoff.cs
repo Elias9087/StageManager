@@ -10,9 +10,17 @@ public sealed class FocusHandoff
 	/// <summary>How long after the active window vanished an activation counts as a handoff by Windows.</summary>
 	public static readonly TimeSpan DefaultWindow = TimeSpan.FromMilliseconds(300);
 
+	/// <summary>
+	/// How long to wait before deciding about a window out of sight that got the focus. Windows activates the next window before it
+	/// reports that the active one is minimized, so the reason for the activation may only be known a moment later.
+	/// </summary>
+	public static readonly TimeSpan DecisionDelay = TimeSpan.FromMilliseconds(150);
+
 	private readonly Func<DateTime> _clock;
 	private readonly TimeSpan _window;
 	private long? _active;
+	private long? _previous;
+	private DateTime _activatedAt;
 	private DateTime? _vanishedAt;
 
 	public FocusHandoff(Func<DateTime>? clock = null, TimeSpan? window = null)
@@ -25,16 +33,36 @@ public sealed class FocusHandoff
 	public long? Active => _active;
 
 	/// <summary>A window got the focus.</summary>
-	public void Activated(long window) => _active = window;
-
-	/// <summary>A window closed, hid or minimized itself. Only the active window makes Windows hand the focus on.</summary>
-	public void Vanished(long window)
+	public void Activated(long window)
 	{
-		if (_active != window)
+		if (_active == window)
 			return;
 
-		_active = null;
-		_vanishedAt = _clock();
+		_previous = _active;
+		_active = window;
+		_activatedAt = _clock();
+	}
+
+	/// <summary>
+	/// A window closed, hid or minimized itself. Only the active window makes Windows hand the focus on. The window that was active
+	/// right before counts as well: Windows may report the new active window first.
+	/// </summary>
+	public void Vanished(long window)
+	{
+		var now = _clock();
+
+		if (_active == window)
+		{
+			_active = null;
+			_vanishedAt = now;
+			return;
+		}
+
+		if (_previous == window && now - _activatedAt <= _window)
+		{
+			_previous = null;
+			_vanishedAt = now;
+		}
 	}
 
 	/// <summary>
@@ -50,6 +78,13 @@ public sealed class FocusHandoff
 
 		return _vanishedAt is DateTime vanished && _clock() - vanished <= _window;
 	}
+
+	/// <summary>
+	/// True if a window that got the focus might have been given it by Windows: the decision waits for <see cref="DecisionDelay"/>,
+	/// then <see cref="IsHandoff"/> knows whether the active window vanished.
+	/// </summary>
+	public static bool MightBeHandoff(bool targetOnScreen, bool targetInCurrentScene, bool currentSceneHasWindowOnScreen) =>
+		!targetOnScreen && !targetInCurrentScene && currentSceneHasWindowOnScreen;
 
 	/// <summary>
 	/// True if the focus rests on a window that is not on the screen and not part of the scene on the stage, while that scene has a

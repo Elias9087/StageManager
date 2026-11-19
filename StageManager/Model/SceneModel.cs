@@ -195,6 +195,9 @@ namespace StageManager.Model
 
 		public System.Windows.Thickness IconsMargin => new(0, 5, 0, CardGap);
 
+		/// <summary>Width of the row of icons and the close button: up to the far edge of the windows on the card, so the button sits next to them.</summary>
+		public double IconRowWidth { get; private set; } = 150;
+
 		/// <summary>
 		/// Sets the card size and arranges the thumbnails of the windows as a stack. Called again whenever the layout or the windows change.
 		/// </summary>
@@ -237,6 +240,14 @@ namespace StageManager.Model
 
 			for (int i = 0; i < slots.Length; i++)
 				Windows[i].ApplySlot(slots[i]);
+
+			var alignX = CardAlignment.For(App.Settings.Current.Sidebar.Side).X;
+			var rowWidth = CardShape.IconRowWidth(ThumbnailWidth, CardHeight, sizes, _maxVisibleWindows, alignX, Windows.Count);
+			if (Math.Abs(rowWidth - IconRowWidth) > 0.01)
+			{
+				IconRowWidth = rowWidth;
+				RaisePropertyChanged(nameof(IconRowWidth));
+			}
 		}
 	}
 }

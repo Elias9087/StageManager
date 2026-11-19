@@ -123,4 +123,5 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>Automatic (shown when clicking the desktop)</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>When StageManager hides the icons on your desktop. Like on macOS, a click on the desktop steps all windows aside and shows them.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager is running already. Look for its icon in the notification area.</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} runs as administrator. StageManager cannot move its windows and leaves them alone until it runs as administrator itself.</value></data>
 </root>

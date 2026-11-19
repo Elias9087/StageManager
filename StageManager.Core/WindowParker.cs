@@ -178,6 +178,13 @@ public sealed class WindowParker
 			return _entries.FirstOrDefault(e => e.Window == window)?.Original;
 	}
 
+	/// <summary>Where a parked window was moved to, null if it is not parked.</summary>
+	public Area? ParkedRectOf(long window)
+	{
+		lock (_lock)
+			return _entries.FirstOrDefault(e => e.Window == window)?.Parked;
+	}
+
 	/// <summary>The visible frame a parked window had before, null if it is not parked.</summary>
 	public Area? OriginalFrameOf(long window)
 	{

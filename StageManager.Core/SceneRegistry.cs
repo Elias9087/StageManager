@@ -53,10 +53,10 @@ public sealed class SceneRegistry
 	{
 		public Guid Id { get; } = Guid.NewGuid();
 
-		public GroupKind Kind { get; init; } = GroupKind.Apps;
+		public GroupKind Kind { get; set; } = GroupKind.Apps;
 
 		/// <summary>The monitor of a snap group, it only takes windows of that monitor. 0 for other groups.</summary>
-		public long Monitor { get; init; }
+		public long Monitor { get; set; }
 
 		public List<string> Keys { get; } = new();
 
@@ -192,6 +192,13 @@ public sealed class SceneRegistry
 
 		var moved = sourceGroup.Windows.ToList();
 		targetGroup.Windows.AddRange(moved);
+
+		// a snap group stays one, whichever card was dropped onto which: the result keeps the layout
+		if (sourceGroup.Kind == GroupKind.SnapGroup && targetGroup.Kind != GroupKind.SnapGroup)
+		{
+			targetGroup.Kind = GroupKind.SnapGroup;
+			targetGroup.Monitor = sourceGroup.Monitor;
+		}
 
 		foreach (var key in sourceGroup.Keys)
 		{

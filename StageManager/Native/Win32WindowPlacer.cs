@@ -127,6 +127,10 @@ namespace StageManager.Native
 
 		public static Area? OriginalFrameOf(IntPtr window) => Instance.Value.OriginalFrameOf(window.ToInt64());
 
+		public static Area? OriginalRectOf(IntPtr window) => Instance.Value.OriginalRectOf(window.ToInt64());
+
+		public static Area? ParkedRectOf(IntPtr window) => Instance.Value.ParkedRectOf(window.ToInt64());
+
 		public static int RestoreAll()
 		{
 			// nothing was parked if the parker was never created, but a journal of a killed run may still exist

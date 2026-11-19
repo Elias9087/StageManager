@@ -175,14 +175,42 @@ public class SnapGroupRegistryTests
 	}
 
 	[Fact]
-	public void A_snap_group_merged_into_a_card_of_apps_becomes_part_of_it()
+	public void A_snap_group_merged_into_a_card_of_apps_makes_it_a_snap_group()
 	{
 		var registry = Create(out var groups);
 		var snap = registry.CreateSnapGroup(new long[] { 3, 4 }, Monitor)!.Value.GroupId;
 
 		registry.Merge(snap, groups[0].Id);
 
-		Assert.Equal(GroupKind.Apps, registry.KindOf(groups[0].Id));
+		Assert.Equal(GroupKind.SnapGroup, registry.KindOf(groups[0].Id));
+		Assert.Equal(Monitor, registry.MonitorOf(groups[0].Id));
 		Assert.Equal(new long[] { 1, 2, 3, 4 }, registry.WindowsOf(groups[0].Id));
+	}
+
+	[Fact]
+	public void After_a_snap_group_was_merged_into_a_card_new_windows_of_its_apps_open_a_new_card()
+	{
+		var registry = Create(out var groups);
+		var snap = registry.CreateSnapGroup(new long[] { 3, 4 }, Monitor)!.Value.GroupId;
+		registry.Merge(snap, groups[0].Id);
+
+		var placement = registry.Place(5, "A");
+
+		Assert.True(placement.Created);
+		Assert.NotEqual(groups[0].Id, placement.GroupId);
+	}
+
+	[Fact]
+	public void Two_snap_groups_merged_keep_the_monitor_of_the_target()
+	{
+		var registry = new SceneRegistry();
+		registry.Initialize(new[] { (1L, "A"), (2L, "B"), (3L, "C"), (4L, "D") });
+		var first = registry.CreateSnapGroup(new long[] { 1, 2 }, Monitor)!.Value.GroupId;
+		var second = registry.CreateSnapGroup(new long[] { 3, 4 }, 99)!.Value.GroupId;
+
+		registry.Merge(second, first);
+
+		Assert.Equal(GroupKind.SnapGroup, registry.KindOf(first));
+		Assert.Equal(Monitor, registry.MonitorOf(first));
 	}
 }

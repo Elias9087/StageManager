@@ -111,10 +111,12 @@
             ItemsSource="{Binding Scenes}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
+                    <!-- Almost transparent instead of transparent: fully transparent pixels of the sidebar let the pointer through to the window
+                         behind it, then the card would lose the hover in the room beside a narrow window and hide its close button. -->
                     <StackPanel Orientation="Vertical"
                         Visibility="{Binding Visibility}"
                         Style="{StaticResource SceneOpacity}"
-                        Background="Transparent"
+                        Background="#01000000"
                         MouseLeftButtonDown="Card_MouseLeftButtonDown"
                         MouseMove="Card_MouseMove"
                         MouseLeftButtonUp="Card_MouseLeftButtonUp"
@@ -229,7 +231,8 @@
                         <Grid
                             Margin="{Binding IconsMargin}"
                             Opacity="{Binding CardOpacity}"
-                            Width="{Binding ThumbnailWidth}">
+                            HorizontalAlignment="{Binding IconAlignment, ElementName=thisWindow}"
+                            Width="{Binding IconRowWidth}">
                             <ItemsControl
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="{Binding IconAlignment, ElementName=thisWindow}"

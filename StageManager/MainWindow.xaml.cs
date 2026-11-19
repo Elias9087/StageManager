@@ -155,6 +155,11 @@ namespace StageManager
 			RescueWindows();
 
 			var windowsManager = new WindowsManager();
+
+			// once per app: its windows stay on the screen over every scene, the user should know why
+			windowsManager.UnmanageableApp += (_, app) => Dispatcher.BeginInvoke(() =>
+				trayIcon.ShowBalloonTip("Stage Manager", Loc.Format("Hint.Elevated", app), Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info));
+
 			SceneManager = new SceneManager(windowsManager);
 			await SceneManager.Start().ConfigureAwait(true);
 

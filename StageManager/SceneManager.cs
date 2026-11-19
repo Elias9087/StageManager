@@ -110,6 +110,9 @@ namespace StageManager
 
 			InitializeSnapGroups();
 
+			// the window that has the focus at start: it may vanish before any focus change was reported
+			_focus.Activated(Win32.GetForegroundWindow().ToInt64());
+
 			await WindowsManager.Start();
 		}
 
@@ -152,13 +155,23 @@ namespace StageManager
 			if (type == WindowUpdateType.Foreground)
 			{
 				var handoff = IsFocusHandoff(window);
+				var mightBeHandoff = !handoff && MightBeFocusHandoff(window);
 				_focus.Activated(window.Handle.ToInt64());
+				var focusVersion = ++_focusVersion;
 
 				if (handoff)
 				{
 					// Windows gave the focus to a window out of sight because the active one vanished: the stage stays, its front window gets the focus
 					DebugLog.Write("FOCUS", $"handoff to {DebugLog.Describe(window.Handle)} ignored, the stage keeps the focus");
 					FocusStage();
+					return;
+				}
+
+				if (mightBeHandoff)
+				{
+					// Windows reports the new active window before the old one is minimized: decide a moment later
+					DebugLog.Write("FOCUS", $"{DebugLog.Describe(window.Handle)} out of sight got the focus, deciding in {FocusHandoff.DecisionDelay.TotalMilliseconds} ms");
+					DecideFocusLater(window, focusVersion).SafeFireAndForget(ex => Log.Error("Deciding about a focus change failed", ex));
 					return;
 				}
 
@@ -186,6 +199,41 @@ namespace StageManager
 		}
 
 		private readonly FocusHandoff _focus = new();
+		private int _focusVersion;
+
+		private bool MightBeFocusHandoff(IWindow window)
+		{
+			var current = _current;
+			if (current is null)
+				return false;
+
+			return FocusHandoff.MightBeHandoff(
+				targetOnScreen: IsOnScreen(window.Handle),
+				targetInCurrentScene: current.Windows.Any(w => w.Handle == window.Handle),
+				currentSceneHasWindowOnScreen: current.Windows.Any(w => IsOnScreen(w.Handle)));
+		}
+
+		private async Task DecideFocusLater(IWindow window, int focusVersion)
+		{
+			await Task.Delay(FocusHandoff.DecisionDelay).ConfigureAwait(true);
+
+			// the focus moved on in the meantime, the newer change decides
+			if (focusVersion != _focusVersion || _suspend)
+			{
+				DebugLog.Write("FOCUS", $"decision about {DebugLog.Describe(window.Handle)} dropped, a newer focus change or switch came in");
+				return;
+			}
+
+			if (IsFocusHandoff(window))
+			{
+				DebugLog.Write("FOCUS", $"handoff to {DebugLog.Describe(window.Handle)} ignored (reported before the active window vanished), the stage keeps the focus");
+				FocusStage();
+				return;
+			}
+
+			DebugLog.Write("FOCUS", $"{DebugLog.Describe(window.Handle)} was activated by the user, switching");
+			HandleForeground(window);
+		}
 
 		private bool IsFocusHandoff(IWindow window)
 		{
@@ -203,14 +251,16 @@ namespace StageManager
 		/// Visible on a monitor: not hidden, not minimized and not out of the screen. Decided by where the window is, not by whether it is
 		/// parked: Windows or the user may have put a parked window on the screen, and a window that was just brought back may still be
 		/// on its way (the move is asynchronous).
+		/// The real window rectangle counts: WindowGeometry.FrameOf reports the work area for every maximized window, wherever it is,
+		/// and maximized windows are parked as they are.
 		/// </summary>
 		private static bool IsOnScreen(IntPtr handle)
 		{
 			if (!Win32.IsWindowVisible(handle) || Win32.IsIconic(handle))
 				return false;
 
-			return WindowGeometry.FrameOf(handle) is Area frame
-				&& System.Windows.Forms.Screen.AllScreens.Any(s => FlightPlanner.Intersects(new Area(s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom), frame));
+			var rect = RectOf(handle);
+			return System.Windows.Forms.Screen.AllScreens.Any(s => FlightPlanner.Intersects(new Area(s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom), rect));
 		}
 
 		/// <summary>Gives the focus to the front window of the stage that is on the screen.</summary>
@@ -263,11 +313,42 @@ namespace StageManager
 			}
 		}
 
+		/// <summary>
+		/// Windows of apps that run with more rights than StageManager do not move (UIPI) and would stay over every other scene. They are
+		/// recognized at start, this catches the ones that were not: a parked window still at its place is not managed any more.
+		/// </summary>
+		/// <remarks>Runs once, shortly after the windows were parked by a switch, and compares where they are with their parking spot.</remarks>
+		private async Task AbandonWindowsThatRefusedToMove(IReadOnlyList<IntPtr> parked)
+		{
+			// the move is asynchronous
+			await Task.Delay(500).ConfigureAwait(true);
+
+			foreach (var handle in parked)
+			{
+				if (_current?.Windows.Any(w => w.Handle == handle) == true)
+					continue;
+
+				if (Parking.OriginalRectOf(handle) is not Area original || Parking.ParkedRectOf(handle) is not Area spot)
+					continue;
+
+				var now = RectOf(handle);
+				if (!Elevation.RefusedToMove(original, spot, now, ProcessInfo.IsHung(handle)))
+					continue;
+
+				DebugLog.Write("REFUSED", $"{DebugLog.Describe(handle)} did not move when it was parked: original={Text(original)} spot={Text(spot)} now={Text(now)}, it is not managed any more");
+				Parking.Forget(handle);
+				WindowsManager.Abandon(handle);
+			}
+		}
+
 		private void WindowsManager_UntrackedFocus(object? sender, IntPtr e)
 		{
 			// raised for any event of a window that is not tracked, only a real focus change counts
 			if (Win32.GetForegroundWindow() == e)
+			{
 				_focus.Activated(e.ToInt64());
+				_focusVersion++;
+			}
 
 			if (_suspend)
 				return;
@@ -445,6 +526,7 @@ namespace StageManager
 			IsDesktopView = scene is null;
 
 			var takeoff = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+			List<IntPtr>? refusalCheck = null;
 
 			try
 			{
@@ -477,8 +559,14 @@ namespace StageManager
 				if (scene is object && animated is null)
 					ShowInOrder(scene.Windows);
 
+				// where the windows were before they leave the screen: a window Windows refuses to move is not managed any more
+				// only the windows parked by this switch, the others were parked before and are checked already
+				var parkedBefore = otherWindows.Where(o => Parking.IsParked(o.Handle)).Select(o => o.Handle).ToHashSet();
+
 				foreach (var o in otherWindows)
 					WindowStrategy.Hide(o);
+
+				refusalCheck = otherWindows.Select(o => o.Handle).Where(h => !parkedBefore.Contains(h) && Parking.IsParked(h)).ToList();
 
 				CurrentSceneSelectionChanged?.Invoke(this, new CurrentSceneSelectionChangedEventArgs(prior, _current, animated?.PriorCardWaits == true));
 
@@ -499,6 +587,9 @@ namespace StageManager
 
 			if (scene is object)
 				FocusStageIfStranded(scene).SafeFireAndForget(ex => Log.Error("Focusing the stage failed", ex));
+
+			if (refusalCheck is { Count: > 0 })
+				AbandonWindowsThatRefusedToMove(refusalCheck).SafeFireAndForget(ex => Log.Error("Checking the parked windows failed", ex));
 		}
 
 		/// <summary>TEMPORARY: the state of the windows on the stage once the switch has settled.</summary>
@@ -831,10 +922,14 @@ namespace StageManager
 				_suspend = true;
 
 				var target = _current;
+				var sourceWasSnapGroup = IsSnapGroup(source);
 				if (_registry.Merge(source.Id, target.Id) is null)
 					return Task.CompletedTask;
 
+				DebugLog.Write("JOINCARD", $"{DescribeScene(source)} (snap group: {sourceWasSnapGroup}) onto the stage {DescribeScene(target)}, result is a snap group: {IsSnapGroup(target)}");
+
 				var moving = source.Windows.ToList();
+				TakeOverLayout(source, target);
 				foreach (var w in moving)
 				{
 					source.Remove(w);
@@ -879,10 +974,14 @@ namespace StageManager
 			{
 				_suspend = true;
 
+				var sourceWasSnapGroup = IsSnapGroup(source);
 				if (_registry.Merge(source.Id, target.Id) is null)
 					return Task.CompletedTask;
 
+				DebugLog.Write("MERGE", $"{DescribeScene(source)} (snap group: {sourceWasSnapGroup}) into {DescribeScene(target)}, result is a snap group: {IsSnapGroup(target)}");
+
 				var moving = source.Windows.ToList();
+				TakeOverLayout(source, target);
 				foreach (var w in moving)
 				{
 					source.Remove(w);
@@ -906,8 +1005,17 @@ namespace StageManager
 		/// <summary>Takes one app out of a scene that holds several apps and gives it a card of its own.</summary>
 		public Task SplitApp(Scene scene, string appKey)
 		{
+			// the windows of an app taken out of a snap group go back to the card of their app, like windows dragged out of the layout
+			if (scene is object && IsSnapGroup(scene))
+			{
+				SplitAppFromSnapGroup(scene, appKey);
+				return Task.CompletedTask;
+			}
+
 			if (scene is null || _registry.Split(scene.Id, appKey) is not SplitResult split)
 				return Task.CompletedTask;
+
+			DebugLog.Write("SPLIT", $"app {appKey} out of {DescribeScene(scene)} into a card of its own");
 
 			try
 			{
