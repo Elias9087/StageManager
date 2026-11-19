@@ -1165,12 +1165,27 @@ namespace StageManager
 			var apps = SceneManager.AppsOf(card.Scene);
 			var canAdd = SceneManager.Current is object;
 
+			// the window that was right clicked, on the card shown by its thumbnail or its icon
+			var detach = _menuWindow is WindowModel clicked && card.Windows.Contains(clicked) && SceneManager.CanDetach(clicked.Window) ? clicked : null;
+			_detachWindow = detach;
+
+			foreach (var separator in menu.Items.OfType<Separator>().Where(s => s.Tag as string == "detach"))
+				separator.Visibility = detach is null ? Visibility.Collapsed : Visibility.Visible;
+
 			foreach (var item in menu.Items.OfType<MenuItem>())
 			{
 				switch (item.Tag as string)
 				{
 					case "add":
 						item.IsEnabled = canAdd;
+						break;
+					case "detach":
+						item.Visibility = detach is null ? Visibility.Collapsed : Visibility.Visible;
+						if (detach is object)
+						{
+							item.Header = Loc.Format("Card.DetachWindow", detach.Title);
+							item.Icon = new System.Windows.Controls.Image { Source = detach.Icon, Width = 16, Height = 16 };
+						}
 						break;
 					case "exclude":
 						FillExcludeMenu(item, card.Scene);
@@ -1234,8 +1249,27 @@ namespace StageManager
 			App.Settings.Update(s => s.Stage.ExcludedApps = ExcludedApps.With(s.Stage.ExcludedApps, entry));
 		}
 
+		private WindowModel? _menuWindow;
+		private WindowModel? _detachWindow;
+
+		/// <summary>Remembers which window of the card was right clicked: its thumbnail or its icon. The card menu can detach it.</summary>
+		private void Card_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			_menuWindow = null;
+
+			for (var element = e.OriginalSource as DependencyObject; element is not null && !ReferenceEquals(element, sender); element = VisualTreeHelper.GetParent(element))
+			{
+				if (element is FrameworkElement { DataContext: WindowModel model })
+				{
+					_menuWindow = model;
+					break;
+				}
+			}
+		}
+
 		private void CardMenu_Closed(object sender, RoutedEventArgs e)
 		{
+			_menuWindow = null;
 			_menuOpen = false;
 		}
 
@@ -1248,6 +1282,10 @@ namespace StageManager
 			{
 				case "add":
 					SceneManager.JoinToCurrent(card.Scene).SafeFireAndForget();
+					break;
+				case "detach":
+					if (_detachWindow is WindowModel model)
+						SceneManager.DetachWindow(model.Window).SafeFireAndForget(ex => Log.Error("Detaching a window failed", ex));
 					break;
 				case "close":
 					SceneManager.CloseScene(card.Scene);

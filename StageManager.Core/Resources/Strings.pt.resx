@@ -123,5 +123,6 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>Automático (visíveis ao clicar na área de trabalho)</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Quando o StageManager oculta os ícones da área de trabalho. Como no macOS, um clique na área de trabalho afasta todas as janelas e mostra os ícones.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>O StageManager já está em execução. Procure o ícone dele na área de notificação.</value></data>
-  <data name="Hint.Elevated" xml:space="preserve"><value>{0} está sendo executado como administrador. O StageManager não pode mover suas janelas e as deixa como estão até ser executado como administrador.</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} está sendo executado como administrador e não é gerenciado.</value></data>
+  <data name="Card.DetachWindow" xml:space="preserve"><value>Separar esta janela: {0}</value></data>
 </root>

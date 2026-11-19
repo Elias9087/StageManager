@@ -123,5 +123,6 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>Automatico (visibili dopo un clic sul desktop)</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Quando StageManager nasconde le icone del desktop. Come su macOS, un clic sul desktop sposta da parte tutte le finestre e le mostra.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager è già in esecuzione. Cerca la sua icona nell&apos;area di notifica.</value></data>
-  <data name="Hint.Elevated" xml:space="preserve"><value>{0} viene eseguito come amministratore. StageManager non può spostarne le finestre e le lascia stare finché non viene eseguito anch'esso come amministratore.</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} viene eseguito come amministratore e non viene gestito.</value></data>
+  <data name="Card.DetachWindow" xml:space="preserve"><value>Separa questa finestra: {0}</value></data>
 </root>

@@ -35,8 +35,18 @@ public enum GroupKind
 	Apps,
 
 	/// <summary>Windows arranged together with the snap feature of Windows. New windows never join it, they go to the group of their app.</summary>
-	SnapGroup
+	SnapGroup,
+
+	/// <summary>
+	/// A window that was taken out of its group to have a card of its own. New windows of its app never join it, they go to the group
+	/// of their app, e.g. the second KiTTY window gets its own card while new KiTTY windows still go to the KiTTY card.
+	/// </summary>
+	Window
 }
+
+/// <param name="SourceId">The group the window left.</param>
+/// <param name="GroupId">The new group of the window.</param>
+public readonly record struct DetachResult(Guid SourceId, Guid GroupId);
 
 /// <param name="NewGroupId">The group the app has on its own now.</param>
 /// <param name="Windows">The windows of the app.</param>
@@ -86,6 +96,7 @@ public sealed class SceneRegistry
 	{
 		_groups.Clear();
 		_keyOfWindow.Clear();
+		_detached.Clear();
 
 		foreach (var (window, key) in windows)
 		{
@@ -142,6 +153,7 @@ public sealed class SceneRegistry
 
 		group.Windows.Remove(window);
 		_keyOfWindow.Remove(window, out var key);
+		_detached.Remove(window);
 		DropKeyIfUnused(group, key);
 
 		if (group.Windows.Count > 0)
@@ -150,6 +162,36 @@ public sealed class SceneRegistry
 		_groups.Remove(group);
 		return new Removal(group.Id, GroupRemoved: true);
 	}
+
+	private readonly HashSet<long> _detached = new();
+
+	/// <summary>
+	/// Gives a window a group of its own, right after the group it leaves, also if other windows of its app stay there. It keeps it as
+	/// long as it exists: when it leaves a snap group later, it gets a group of its own again instead of joining the group of its app.
+	/// </summary>
+	/// <returns>Null if the window is unknown or alone in its group already.</returns>
+	public DetachResult? Detach(long window)
+	{
+		var source = FindGroupOf(window);
+		if (source is null || source.Windows.Count < 2)
+			return null;
+
+		var key = _keyOfWindow.GetValueOrDefault(window) ?? "";
+
+		source.Windows.Remove(window);
+		DropKeyIfUnused(source, key);
+
+		var created = new Group { Kind = GroupKind.Window };
+		created.Keys.Add(key);
+		created.Windows.Add(window);
+		_groups.Insert(_groups.IndexOf(source) + 1, created);
+
+		_detached.Add(window);
+		return new DetachResult(source.Id, created.Id);
+	}
+
+	/// <summary>True if the window was detached and keeps a group of its own.</summary>
+	public bool IsDetached(long window) => _detached.Contains(window);
 
 	/// <summary>Moves a single window into another group. Its app follows if the group does not have it yet.</summary>
 	/// <returns>Null if nothing was moved: unknown window, unknown target or same group.</returns>
@@ -199,6 +241,10 @@ public sealed class SceneRegistry
 			targetGroup.Kind = GroupKind.SnapGroup;
 			targetGroup.Monitor = sourceGroup.Monitor;
 		}
+
+		// a detached window that gets the card of an app holds that app now: new windows of the app join it again
+		if (sourceGroup.Kind == GroupKind.Apps && targetGroup.Kind == GroupKind.Window)
+			targetGroup.Kind = GroupKind.Apps;
 
 		foreach (var key in sourceGroup.Keys)
 		{
@@ -294,11 +340,13 @@ public sealed class SceneRegistry
 
 		var key = _keyOfWindow.GetValueOrDefault(window) ?? "";
 
-		var target = FindByKey(key);
+		// a detached window has no home in the group of its app, it gets a group of its own again
+		var detached = _detached.Contains(window);
+		var target = detached ? null : FindByKey(key);
 		var targetCreated = target is null;
 		if (target is null)
 		{
-			target = new Group();
+			target = new Group { Kind = detached ? GroupKind.Window : GroupKind.Apps };
 			target.Keys.Add(key);
 			_groups.Insert(_groups.IndexOf(source) + 1, target);
 		}

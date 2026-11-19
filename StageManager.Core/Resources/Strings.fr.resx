@@ -123,5 +123,6 @@
   <data name="Tray.IconsAutomatic" xml:space="preserve"><value>Automatique (visibles après un clic sur le bureau)</value></data>
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Quand StageManager masque les icônes du bureau. Comme sur macOS, un clic sur le bureau écarte toutes les fenêtres et les affiche.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager est déjà en cours d&apos;exécution. Cherchez son icône dans la zone de notification.</value></data>
-  <data name="Hint.Elevated" xml:space="preserve"><value>{0} s'exécute en tant qu'administrateur. StageManager ne peut pas déplacer ses fenêtres et les laisse tranquilles tant qu'il ne s'exécute pas lui-même en tant qu'administrateur.</value></data>
+  <data name="Hint.Elevated" xml:space="preserve"><value>{0} s'exécute en tant qu'administrateur et n'est pas géré.</value></data>
+  <data name="Card.DetachWindow" xml:space="preserve"><value>Détacher cette fenêtre : {0}</value></data>
 </root>

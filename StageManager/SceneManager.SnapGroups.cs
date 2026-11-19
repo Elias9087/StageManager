@@ -498,6 +498,51 @@ namespace StageManager
 				target.Layout[handle] = rect;
 		}
 
+		/// <summary>True if the window can get a card of its own: it shares its card with other windows.</summary>
+		public bool CanDetach(IWindow window) => FindSceneForWindow(window) is Scene scene && scene.Windows.Count() > 1;
+
+		/// <summary>
+		/// "Detach this window" on a card: the window gets a card of its own, also if other windows of its app stay on the card. New
+		/// windows of the app still go to the card of the app. A window that leaves the stage is no longer shown.
+		/// </summary>
+		public Task DetachWindow(IWindow window)
+		{
+			var scene = FindSceneForWindow(window);
+			if (scene is null)
+				return Task.CompletedTask;
+
+			var wasCurrent = ReferenceEquals(scene, _current);
+			var wasSnapGroup = IsSnapGroup(scene);
+
+			try
+			{
+				_suspend = true;
+
+				if (_registry.Detach(window.Handle.ToInt64()) is null)
+				{
+					DebugLog.Write("DETACH", $"{DebugLog.Describe(window.Handle)} is alone on its card, nothing to do");
+					return Task.CompletedTask;
+				}
+
+				DebugLog.Write("DETACH", $"{DebugLog.Describe(window.Handle)} out of {DescribeScene(scene)} (snap group: {wasSnapGroup}) onto a card of its own");
+
+				SyncScenes(new[] { window });
+
+				// a snap group of one window is no layout any more
+				if (wasSnapGroup)
+					DissolveIfTooSmall(scene, switchToRemainingWindow: wasCurrent);
+
+				if (wasCurrent)
+					WindowStrategy.Hide(window);
+			}
+			finally
+			{
+				_suspend = false;
+			}
+
+			return Task.CompletedTask;
+		}
+
 		/// <summary>"Separate" on the card of a snap group: the windows of the app go back to the card of their app.</summary>
 		private void SplitAppFromSnapGroup(Scene group, string appKey)
 		{
