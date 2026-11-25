@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Settings...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Start with Windows</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Sidebar position</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Scenes in sidebar</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Cards at full size</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Desktop icons</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Always hidden</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Never change</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Preview</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Position</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>The screen edge the sidebar sits at.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Scenes in sidebar</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>How many scenes are shown at the same time.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Cards at full size</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>How many cards have room at full size. With more scenes the cards get smaller, beyond that the sidebar scrolls with the mouse wheel.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Windows per scene</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Windows of a scene that show as stacked thumbnails. All others only show as icons.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (no stack)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Drag cards onto the stage</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Drag a card onto the stage to add its apps to it.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Thumbnails {0} x {1}, sidebar {2} wide, calculated for a screen height of {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>With this size only {0} of {1} scenes fit on this screen. The others stay managed but are not shown in the sidebar.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>With this size only {0} of {1} cards have room at full size on this screen. With more scenes the cards get smaller or the sidebar scrolls.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animate scene changes</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>How the windows move when you switch scenes.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Follow Windows (default)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager is running already. Look for its icon in the notification area.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} runs as administrator and is not managed.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>All {0} windows</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Manage again</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Excluded apps</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Click an app to manage it again:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Detach the active window from its scene</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

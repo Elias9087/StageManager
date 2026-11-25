@@ -71,4 +71,38 @@ public class ScreenFitTests
 
 		Assert.Equal(new Area(3248, 100, 3848, 500), fitted);
 	}
+
+	[Fact]
+	public void A_window_that_sticks_out_is_not_inside()
+	{
+		Assert.False(ScreenFit.IsInside(new Area(990, 234, 2748, 1079), Monitors, WorkAreas));
+		Assert.False(ScreenFit.IsInside(new Area(100, 100, 900, 1180), Monitors, WorkAreas));
+		Assert.True(ScreenFit.IsInside(new Area(100, 100, 900, 700), Monitors, WorkAreas));
+	}
+
+	[Fact]
+	public void A_snapped_window_with_its_invisible_borders_is_inside()
+	{
+		Assert.True(ScreenFit.IsInside(new Area(-7, 0, 967, 1159), Monitors, WorkAreas));
+	}
+
+	[Fact]
+	public void A_window_maximized_by_Windows_is_cleanly_maximized()
+	{
+		Assert.True(ScreenFit.IsCleanlyMaximized(new Area(-8, -8, 1928, 1160), Monitors, WorkAreas));
+	}
+
+	[Fact]
+	public void A_maximized_window_that_was_moved_is_not_cleanly_maximized()
+	{
+		// 25.11. 14:11:54: Claude
+		Assert.False(ScreenFit.IsCleanlyMaximized(new Area(35, 0, 1971, 1168), Monitors, WorkAreas));
+		Assert.False(ScreenFit.IsCleanlyMaximized(new Area(-2096, 0, -160, 1168), Monitors, WorkAreas));
+	}
+
+	[Fact]
+	public void A_window_maximized_for_another_monitor_is_not_cleanly_maximized()
+	{
+		Assert.False(ScreenFit.IsCleanlyMaximized(new Area(-8, -8, 3448, 1448), Monitors, WorkAreas));
+	}
 }

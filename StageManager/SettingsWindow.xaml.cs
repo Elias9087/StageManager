@@ -523,6 +523,7 @@ namespace StageManager
 				(HotkeyText.Describe(keys, HotkeyAction.Next, Loc.KeyName), Loc.Get("Keyboard.Next")),
 				(HotkeyText.Describe(keys, HotkeyAction.Previous, Loc.KeyName), Loc.Get("Keyboard.Previous")),
 				(HotkeyText.Format(keys, Loc.KeyName) + "+1...9", Loc.Get("Keyboard.Card")),
+				(HotkeyText.Describe(keys, HotkeyAction.Detach, Loc.KeyName), Loc.Get("Keyboard.Detach")),
 				(Loc.KeyName("Esc"), Loc.Get("Keyboard.Cancel"))
 			};
 
@@ -579,6 +580,17 @@ namespace StageManager
 			appsEmpty.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 		}
 
+		/// <summary>The apps that are left alone, by name, for the menu of the tray icon.</summary>
+		internal static IReadOnlyList<(string Entry, string Name, string Path)> ExcludedAppsByName()
+		{
+			var running = RunningByFileName();
+			return App.Settings.Current.Stage.ExcludedApps
+				.Select(entry => RowFor(entry, running))
+				.OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
+				.Select(r => (r.Entry, r.Name, r.Detail))
+				.ToList();
+		}
+
 		private static Dictionary<string, RunningApp> RunningByFileName()
 		{
 			try
@@ -618,7 +630,7 @@ namespace StageManager
 			}
 		}
 
-		/// <summary>The trash can of a row.</summary>
+		/// <summary>The button "Manage again" of a row.</summary>
 		private void AppsDelete_Click(object sender, RoutedEventArgs e)
 		{
 			e.Handled = true;

@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>设置...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>随 Windows 启动</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>侧边栏位置</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>侧边栏中的场景数</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>全尺寸卡片数</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>桌面图标</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>始终隐藏</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>从不更改</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>预览</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>位置</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>侧边栏所在的屏幕边缘。</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>侧边栏中的场景数</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>同时显示的场景数量。</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>全尺寸卡片数</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>以全尺寸显示的卡片数量。场景更多时卡片会变小，再多则可用鼠标滚轮滚动侧边栏。</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>每个场景的窗口数</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>场景中以堆叠缩略图显示的窗口数。其余窗口只显示为图标。</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1（不堆叠）</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>将卡片拖到舞台</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>将卡片拖到舞台上，即可添加其中的应用。</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>缩略图 {0} x {1}，侧边栏宽度 {2}，按屏幕高度 {3} 计算。</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>按此大小，该屏幕只能容纳 {1} 个场景中的 {0} 个。其余场景仍受管理，但不会显示在侧边栏中。</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>按此大小，该屏幕只能以全尺寸容纳 {1} 张卡片中的 {0} 张。场景更多时卡片会变小或侧边栏会滚动。</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>切换场景时显示动画</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>切换场景时窗口的移动方式。</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>跟随 Windows（默认）</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager 已在运行。请在通知区域查找它的图标。</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} 正以管理员身份运行，不会被管理。</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>所有 {0} 窗口</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>重新管理</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>已排除的应用</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>点击应用即可重新管理:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>将活动窗口从其场景中分离</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

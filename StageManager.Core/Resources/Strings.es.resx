@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Configuración...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Iniciar con Windows</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Posición de la barra lateral</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Escenas en la barra lateral</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Tarjetas a tamaño completo</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Iconos del escritorio</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Siempre ocultos</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>No cambiar nunca</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Vista previa</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Posición</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>El borde de la pantalla en el que está la barra lateral.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Escenas en la barra lateral</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Cuántas escenas se muestran a la vez.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Tarjetas a tamaño completo</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Cuántas tarjetas caben a tamaño completo. Con más escenas las tarjetas se reducen y después la barra lateral se desplaza con la rueda del ratón.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Ventanas por escena</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Ventanas de una escena que se muestran como miniaturas apiladas. Las demás solo aparecen como iconos.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (sin pila)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Arrastrar tarjetas al escenario</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Arrastra una tarjeta al escenario para añadir sus aplicaciones.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniaturas de {0} x {1}, barra lateral de {2} de ancho, calculado para una altura de pantalla de {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Con este tamaño solo caben {0} de {1} escenas en esta pantalla. Las demás siguen gestionadas, pero no aparecen en la barra lateral.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Con este tamaño solo caben {0} de {1} tarjetas a tamaño completo en esta pantalla. Con más escenas las tarjetas se reducen o la barra lateral se desplaza.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animar el cambio de escena</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Cómo se mueven las ventanas al cambiar de escena.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Según Windows (predeterminado)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager ya se está ejecutando. Busca su icono en el área de notificaciones.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} se ejecuta como administrador y no se gestiona.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Todas las ventanas de {0}</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Volver a gestionar</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Aplicaciones excluidas</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Haz clic en una aplicación para volver a gestionarla:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Separar la ventana activa de su escena</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Retroceso</value></data>
 </root>

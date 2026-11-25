@@ -163,7 +163,7 @@ namespace StageManager
 			SceneManager = new SceneManager(windowsManager);
 			await SceneManager.Start().ConfigureAwait(true);
 
-			SceneManager.CardAreaOf = CardArea;
+			SceneManager.CardAreaOf = scene => CardArea(scene, bringIntoView: true);
 			SceneManager.CardScale = _dpiScale;
 			SceneManager.CardHeightOf = CardHeightOf;
 			SceneManager.SidebarHandle = _thisHandle;
@@ -207,15 +207,20 @@ namespace StageManager
 			{
 				var model = SceneModel.FromScene(initialScenes[i]);
 				ApplyLayout(model);
-				model.IsVisible = i <= MaxScenes; // i is zero based, so it should be i+1 but one scene gets selected (and removed from the sidebar) that makes i+0 again
+				model.IsVisible = true;
 				Scenes.Add(model);
 			}
+
+			ShowAllCards();
 		}
 
 		/// <summary>
 		/// Where the thumbnails of a card are on the screen, in physical pixels. Null if the card is not in the sidebar at the moment.
 		/// </summary>
-		private Area? CardArea(Scene scene)
+		private Area? CardArea(Scene scene) => CardArea(scene, bringIntoView: false);
+
+		/// <param name="bringIntoView">Scrolls the sidebar first if the card is out of view, e.g. for windows that fly to it.</param>
+		private Area? CardArea(Scene scene, bool bringIntoView)
 		{
 			if (!IsVisible)
 				return null;
@@ -226,6 +231,9 @@ namespace StageManager
 
 			if (scenesControl.ItemContainerGenerator.ContainerFromItem(model) is not FrameworkElement container)
 				return null;
+
+			if (bringIntoView)
+				ScrollIntoView(container);
 
 			var thumbs = FindThumbnailArea(container);
 			if (thumbs is null || thumbs.ActualWidth <= 0 || thumbs.ActualHeight <= 0)
@@ -283,7 +291,7 @@ namespace StageManager
 			if (currentModel is object)
 				currentModel.CardOpacity = 1;
 
-			SyncVisibilityByUpdatedTimeStamp();
+			ShowAllCards();
 		}
 
 		private void SceneManager_CardLanded(object? sender, Scene scene)
@@ -309,7 +317,7 @@ namespace StageManager
 			Dispatcher.BeginInvoke(() =>
 			{
 				ApplySide();
-				SyncVisibilityByUpdatedTimeStamp();
+				ShowAllCards();
 				SceneManager?.ApplyDesktopIconSettings();
 				SceneManager?.ApplyExcludedApps();
 				ApplyHotkeys();
@@ -346,6 +354,13 @@ namespace StageManager
 			if (SceneManager is null || _dragActive || _drag.IsPressed)
 				return;
 
+			if (action.Kind == HotkeyActionKind.Detach)
+			{
+				CancelPick();
+				SceneManager.DetachActiveWindow().SafeFireAndForget(ex => Log.Error("Detaching the active window failed", ex));
+				return;
+			}
+
 			if (action.Kind == HotkeyActionKind.Number)
 			{
 				CancelPick();
@@ -377,7 +392,12 @@ namespace StageManager
 			_pickedModel = model;
 
 			if (model is object)
+			{
 				model.IsPicked = true;
+
+				if (scenesControl.ItemContainerGenerator.ContainerFromItem(model) is FrameworkElement container)
+					ScrollIntoView(container);
+			}
 		}
 
 		private void CancelPick()
@@ -422,7 +442,12 @@ namespace StageManager
 			var workArea = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
 
 			var sidebar = App.Settings.Current.Sidebar;
-			_layout = SidebarLayout.Calculate(sidebar, workArea.Height / _dpiScale);
+			_layout = SidebarLayout.Calculate(sidebar, workArea.Height / _dpiScale, Scenes.Count);
+			_layoutCards = Scenes.Count;
+
+			// where the sidebar scrolls, the wheel turns it also between the cards. Otherwise those pixels stay transparent and let the
+			// pointer through to the windows behind
+			scenesScroll.Background = _layout.IsScrolling ? new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) : null;
 
 			if (SceneManager is object)
 				SceneManager.CardScale = _dpiScale;
@@ -495,11 +520,6 @@ namespace StageManager
 			set => SetValue(CloseButtonAlignmentProperty, value);
 		}
 
-		/// <summary>
-		/// Number of scenes that fit into the sidebar. Can be lower than the configured number on small screens.
-		/// </summary>
-		private int MaxScenes => _layout.EffectiveMaxScenes;
-
 		private void SceneManager_SceneChanged(object sender, SceneChangedEventArgs e)
 		{
 			this.Dispatcher.Invoke(() =>
@@ -510,7 +530,7 @@ namespace StageManager
 						var created = SceneModel.FromScene(e.Scene);
 						ApplyLayout(created);
 						Scenes.Add(created);
-						SyncVisibilityByUpdatedTimeStamp();
+						ShowAllCards();
 						break;
 					case ChangeType.Updated:
 						if (AllScenes.FirstOrDefault(s => s.Id == e.Scene.Id) is SceneModel toUpdate && toUpdate.UpdateFromScene(e.Scene))
@@ -524,7 +544,7 @@ namespace StageManager
 							else
 								Scenes.Remove(toRemove);
 						}
-						SyncVisibilityByUpdatedTimeStamp();
+						ShowAllCards();
 						break;
 				}
 			});
@@ -931,11 +951,33 @@ namespace StageManager
 
 			return model;
 		}
-		private void SyncVisibilityByUpdatedTimeStamp()
+		/// <summary>
+		/// Every card is shown. With more scenes than have room at full size the cards get smaller, beyond that the sidebar scrolls.
+		/// </summary>
+		private void ShowAllCards()
 		{
-			var scenes = Scenes.OrderByDescending(s => s.Updated).ToArray();
-			for (int i = 0; i < scenes.Length; i++)
-				scenes[i].IsVisible = i < MaxScenes;
+			foreach (var scene in Scenes)
+				scene.IsVisible = true;
+
+			if (Scenes.Count != _layoutCards)
+				UpdateGeometry();
+		}
+
+		// the number of cards the layout was calculated for
+		private int _layoutCards = -1;
+
+		/// <summary>Scrolls the sidebar so that the whole card is in view, at once.</summary>
+		private void ScrollIntoView(FrameworkElement container)
+		{
+			if (scenesScroll.ScrollableHeight <= 0 || !container.IsDescendantOf(scenesScroll))
+				return;
+
+			var top = container.TransformToAncestor(scenesScroll).Transform(new Point(0, 0)).Y;
+			if (top >= 0 && top + container.ActualHeight <= scenesScroll.ViewportHeight)
+				return;
+
+			scenesScroll.ScrollToVerticalOffset(Math.Clamp(scenesScroll.VerticalOffset + top - (scenesScroll.ViewportHeight - container.ActualHeight) / 2, 0, scenesScroll.ScrollableHeight));
+			scenesScroll.UpdateLayout();
 		}
 
 		public ObservableCollection<SceneModel> Scenes { get; } = new ObservableCollection<SceneModel>();
@@ -1375,6 +1417,8 @@ namespace StageManager
 				menuSceneCount.Items.Add(item);
 			}
 
+			FillExcludedMenu();
+
 			menuIconsManage.IsChecked = icons.Mode == DesktopIconsMode.Manage;
 			menuIconsHidden.IsChecked = icons.Mode == DesktopIconsMode.AlwaysHidden;
 			menuIconsUntouched.IsChecked = icons.Mode == DesktopIconsMode.Untouched;
@@ -1383,6 +1427,47 @@ namespace StageManager
 		}
 
 		private static readonly int[] SceneCountChoices = { 2, 3, 4, 5, 6, 8, 10, 12 };
+
+		/// <summary>The apps that are left alone. A click on one lets StageManager manage its windows again.</summary>
+		private void FillExcludedMenu()
+		{
+			menuExcluded.Items.Clear();
+
+			IReadOnlyList<(string Entry, string Name, string Path)> apps;
+			try
+			{
+				apps = SettingsWindow.ExcludedAppsByName();
+			}
+			catch (Exception ex)
+			{
+				Log.Warn($"The excluded apps could not be listed: {ex.Message}");
+				apps = Array.Empty<(string, string, string)>();
+			}
+
+			if (apps.Count == 0)
+			{
+				menuExcluded.Items.Add(new MenuItem { Header = Loc.Get("Apps.Empty"), IsEnabled = false });
+				return;
+			}
+
+			menuExcluded.Items.Add(new MenuItem { Header = Loc.Get("Tray.ExcludedHint"), IsEnabled = false });
+
+			foreach (var (entry, name, path) in apps)
+			{
+				var item = new MenuItem { Header = name, DataContext = entry, Icon = AppIconOf(path), ToolTip = Loc.Get("Apps.RemoveOne") };
+				item.Click += MenuItem_IncludeApp_Click;
+				menuExcluded.Items.Add(item);
+			}
+		}
+
+		private void MenuItem_IncludeApp_Click(object sender, RoutedEventArgs e)
+		{
+			if (sender is not MenuItem { DataContext: string entry } || entry.Length == 0)
+				return;
+
+			Log.Info($"{entry} is managed again, chosen in the menu of the tray icon");
+			App.Settings.Update(s => s.Stage.ExcludedApps = ExcludedApps.Without(s.Stage.ExcludedApps, entry));
+		}
 
 		private void MenuItem_Icons_Click(object sender, RoutedEventArgs e)
 		{

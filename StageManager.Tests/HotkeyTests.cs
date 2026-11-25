@@ -109,6 +109,20 @@ public class HotkeyTests
 	}
 
 	[Fact]
+	public void Detaching_the_active_window_uses_the_held_keys_and_Backspace()
+	{
+		Assert.Equal("Ctrl+Alt+Win+Backspace", HotkeyText.Describe(HotkeyText.Default, HotkeyAction.Detach));
+		Assert.Equal("Strg+Alt+Win+Rücktaste", HotkeyText.Describe(HotkeyText.Default, HotkeyAction.Detach, n => n switch { "Ctrl" => "Strg", "Backspace" => "Rücktaste", _ => n }));
+		Assert.Equal(HotkeyOwner.Unknown, HotkeyAdvice.KnownOwner(Win, HotkeyAction.Detach));
+	}
+
+	[Fact]
+	public void Detaching_is_not_one_of_the_scene_actions()
+	{
+		Assert.DoesNotContain(HotkeyAction.Detach, HotkeyAction.All());
+	}
+
+	[Fact]
 	public void Known_owners_are_named()
 	{
 		Assert.Equal(HotkeyOwner.WindowSwitcher, HotkeyAdvice.KnownOwner(Alt, HotkeyAction.Next));

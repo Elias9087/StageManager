@@ -49,10 +49,12 @@ namespace StageManager.Native
 	{
 		private const int WM_HOTKEY = 0x0312;
 		private const uint VK_TAB = 0x09;
+		private const uint VK_BACK = 0x08;
 		private const uint MOD_SHIFT = 0x0004;
 		private const uint MOD_NOREPEAT = 0x4000;
 		private const int IdNext = 1;
 		private const int IdPrevious = 2;
+		private const int IdDetach = 3;
 		private const int IdCardBase = 10;
 
 		[DllImport("user32.dll", SetLastError = true)]
@@ -116,12 +118,13 @@ namespace StageManager.Native
 
 			if (_enabled && !_suspended && HotkeyText.IsUsable(_keys))
 			{
-				foreach (var action in HotkeyAction.All())
+				foreach (var action in HotkeyAction.All().Append(HotkeyAction.Detach))
 				{
 					var (id, key, extra, repeat) = action.Kind switch
 					{
 						HotkeyActionKind.Next => (IdNext, VK_TAB, 0u, true),
 						HotkeyActionKind.Previous => (IdPrevious, VK_TAB, MOD_SHIFT, true),
+						HotkeyActionKind.Detach => (IdDetach, VK_BACK, 0u, false),
 						_ => (IdCardBase + action.Number, (uint)('0' + action.Number), 0u, false)
 					};
 
@@ -159,6 +162,7 @@ namespace StageManager.Native
 			{
 				IdNext => HotkeyAction.Next,
 				IdPrevious => HotkeyAction.Previous,
+				IdDetach => HotkeyAction.Detach,
 				>= IdCardBase + 1 and <= IdCardBase + HotkeyText.MaxNumber => HotkeyAction.Card(id - IdCardBase),
 				_ => null
 			};

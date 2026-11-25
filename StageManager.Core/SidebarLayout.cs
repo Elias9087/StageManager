@@ -6,7 +6,8 @@ public sealed record SidebarLayoutInput(
 	double Aspect,
 	double FixedSidebarWidth,
 	double FixedThumbnailWidth,
-	double FixedThumbnailHeight);
+	double FixedThumbnailHeight,
+	int SceneCount = 0);
 
 public sealed record SidebarLayoutResult(
 	double ThumbnailWidth,
@@ -14,10 +15,12 @@ public sealed record SidebarLayoutResult(
 	double SidebarWidth,
 	int EffectiveMaxScenes,
 	bool IsLimited,
-	double CardGap = SidebarLayout.MinCardGap);
+	double CardGap = SidebarLayout.MinCardGap,
+	bool IsScrolling = false);
 
 /// <summary>
-/// Calculates how large the thumbnails can be so that the wanted number of scenes fits into the height of the screen.
+/// Calculates how large the thumbnails can be so that the wanted number of scenes fits into the height of the screen. With more
+/// scenes the cards get smaller, down to <see cref="MinShrink"/> of their full size, beyond that the sidebar scrolls. No card is hidden.
 /// All values are device independent units. The constants have to match the sidebar template in MainWindow.xaml.
 /// </summary>
 public static class SidebarLayout
@@ -45,14 +48,19 @@ public static class SidebarLayout
 	public const double MaxThumbnailWidth = 320;
 	public const double MaxThumbnailHeight = 200;
 
-	public static SidebarLayoutResult Calculate(SidebarSettings sidebar, double areaHeight) =>
+	/// <summary>How small the cards get with more scenes than have room at full size, as a share of the full size.</summary>
+	public const double MinShrink = 0.6;
+
+	/// <param name="sceneCount">The cards in the sidebar, 0 for as many as fit at full size.</param>
+	public static SidebarLayoutResult Calculate(SidebarSettings sidebar, double areaHeight, int sceneCount = 0) =>
 		Calculate(new SidebarLayoutInput(
 			areaHeight,
 			sidebar.MaxScenes,
 			sidebar.ThumbnailAspect,
 			sidebar.Width,
 			sidebar.ThumbnailWidth,
-			sidebar.ThumbnailHeight));
+			sidebar.ThumbnailHeight,
+			sceneCount));
 
 	public static SidebarLayoutResult Calculate(SidebarLayoutInput input)
 	{
@@ -97,13 +105,24 @@ public static class SidebarLayout
 		var fitting = (int)Math.Floor(available / (height + chrome));
 		var effective = Math.Clamp(fitting, 1, requested);
 
+		// the sidebar keeps its width when the cards get smaller, so it does not jump with the number of scenes
 		var sidebarWidth = input.FixedSidebarWidth > 0
 			? input.FixedSidebarWidth
 			: Math.Clamp(width + EdgePadding + ShadowRoom, SidebarSettings.MinWidth, SidebarSettings.MaxWidth);
 
-		// room that is left once the cards are as large as they get is shared out between them, but never less than the minimum
-		var gap = Math.Clamp(available / effective - height - IconRowHeight, MinCardGap, MaxCardGap);
+		// more cards than have room at full size: they get smaller so all of them fit, but not below the least size
+		var shown = Math.Max(effective, input.SceneCount);
+		if (shown > effective && height > 0)
+		{
+			var scale = Math.Clamp((available / shown - chrome) / height, MinShrink, 1);
+			width *= scale;
+			height *= scale;
+		}
 
-		return new SidebarLayoutResult(width, height, sidebarWidth, effective, effective < requested, gap);
+		// room that is left once the cards are as large as they get is shared out between them, but never less than the minimum
+		var gap = Math.Clamp(available / shown - height - IconRowHeight, MinCardGap, MaxCardGap);
+		var scrolling = shown * (height + IconRowHeight + gap) - gap > available + 0.5;
+
+		return new SidebarLayoutResult(width, height, sidebarWidth, effective, effective < requested, gap, scrolling);
 	}
 }

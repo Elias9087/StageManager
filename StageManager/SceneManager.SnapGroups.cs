@@ -540,6 +540,36 @@ namespace StageManager
 			return Task.CompletedTask;
 		}
 
+		/// <summary>
+		/// The hotkey "detach the active window": the window in front leaves the stage and gets a card of its own, the other windows of
+		/// the stage stay. A dialog stands for the window it belongs to. Nothing happens if the window is alone on the stage.
+		/// </summary>
+		public async Task DetachActiveWindow()
+		{
+			var foreground = Win32.GetForegroundWindow();
+			var root = Win32.GetAncestor(foreground, Win32.GA.GA_ROOTOWNER);
+			var scene = _current;
+
+			var window = WindowOf(foreground.ToInt64()) ?? (root != IntPtr.Zero ? WindowOf(root.ToInt64()) : null);
+			if (scene is null || window is null || !ReferenceEquals(FindSceneForWindow(window), scene))
+			{
+				DebugLog.Write("DETACH", $"hotkey: {DebugLog.Describe(foreground)} is not a window of the stage, nothing to do");
+				return;
+			}
+
+			if (scene.Windows.Count() < 2)
+			{
+				DebugLog.Write("DETACH", $"hotkey: {DebugLog.Describe(window.Handle)} is alone on the stage, nothing to do");
+				return;
+			}
+
+			DebugLog.Write("DETACH", $"hotkey: {DebugLog.Describe(window.Handle)} leaves the stage");
+			await DetachWindow(window).ConfigureAwait(true);
+
+			// the window that had the focus is out of sight now
+			FocusStage();
+		}
+
 		/// <summary>"Separate" on the card of a snap group: the windows of the app go back to the card of their app.</summary>
 		private void SplitAppFromSnapGroup(Scene group, string appKey)
 		{

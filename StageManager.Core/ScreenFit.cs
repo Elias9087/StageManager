@@ -25,8 +25,8 @@ public static class ScreenFit
 	}
 
 	/// <summary>
-	/// Moves the window into the work area of the monitor it belongs to, as little as possible. A window larger than the work area
-	/// is made smaller. A window that fits stays as it is.
+	/// Moves the window completely into the work area of the monitor it belongs to, as little as possible. A window larger than the
+	/// work area is made smaller. A window that lies in it already stays as it is.
 	/// </summary>
 	/// <param name="workAreas">One per monitor, in the same order.</param>
 	public static Area Fit(Area window, IReadOnlyList<Area> monitors, IReadOnlyList<Area> workAreas)
@@ -43,6 +43,31 @@ public static class ScreenFit
 		var top = Math.Clamp(window.Top, area.Top, area.Bottom - height);
 
 		return new Area(left, top, left + width, top + height);
+	}
+
+	/// <summary>
+	/// How far a maximized window may stick out of the work area on each side. Windows lets it stick out by its invisible borders,
+	/// which grow with the scaling (8 at 100 %).
+	/// </summary>
+	public const double MaximizedBorder = 24;
+
+	/// <summary>True if the whole window lies in the work area of a monitor, up to the invisible borders. Without monitors nothing can be said.</summary>
+	public static bool IsInside(Area window, IReadOnlyList<Area> monitors, IReadOnlyList<Area> workAreas) =>
+		SnapGeometry.IsSame(Fit(window, monitors, workAreas), window, 1);
+
+	/// <summary>
+	/// True if a maximized window covers the work area of a monitor as Windows maximizes it there. Not true for one that Windows
+	/// maximized somewhere else and that was moved later: it sticks out of the monitor on one side and leaves a gap on the other.
+	/// </summary>
+	public static bool IsCleanlyMaximized(Area window, IReadOnlyList<Area> monitors, IReadOnlyList<Area> workAreas)
+	{
+		if (monitors.Count == 0 || workAreas.Count != monitors.Count)
+			return true;
+
+		return workAreas.Any(w =>
+			window.Left <= w.Left + 1 && window.Top <= w.Top + 1 && window.Right >= w.Right - 1 && window.Bottom >= w.Bottom - 1
+			&& window.Left >= w.Left - MaximizedBorder && window.Top >= w.Top - MaximizedBorder
+			&& window.Right <= w.Right + MaximizedBorder && window.Bottom <= w.Bottom + MaximizedBorder);
 	}
 
 	/// <summary>True if <paramref name="b"/> has another size than <paramref name="a"/>.</summary>

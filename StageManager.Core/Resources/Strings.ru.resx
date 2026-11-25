@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Параметры...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Запускать вместе с Windows</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Положение боковой панели</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Сцен на боковой панели</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Карточек в полном размере</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Значки рабочего стола</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Всегда скрыты</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Не изменять</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Предварительный просмотр</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Положение</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>Край экрана, у которого находится боковая панель.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Сцен на боковой панели</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Сколько сцен показывается одновременно.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Карточек в полном размере</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Сколько карточек помещается в полном размере. При большем числе сцен карточки уменьшаются, затем боковую панель можно прокручивать колёсиком мыши.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Окон на сцену</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Окна сцены, которые показываются стопкой миниатюр. Остальные видны только как значки.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (без стопки)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Перетаскивать карточки на сцену</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Перетащите карточку на сцену, чтобы добавить её приложения.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Миниатюры {0} x {1}, ширина боковой панели {2}, расчёт для высоты экрана {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>При таком размере на этом экране помещается только {0} из {1} сцен. Остальные остаются под управлением, но не показываются на боковой панели.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>При таком размере на этом экране в полном размере помещается только {0} из {1} карточек. При большем числе сцен карточки уменьшаются или боковая панель прокручивается.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Анимировать смену сцен</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Как движутся окна при смене сцены.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Как в Windows (по умолчанию)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager уже запущен. Его значок находится в области уведомлений.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} запущен от имени администратора и не управляется.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Все окна {0}</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Снова управлять</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Исключённые приложения</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Нажмите на приложение, чтобы снова управлять им:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Отделить активное окно от его сцены</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

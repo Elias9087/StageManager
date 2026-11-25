@@ -450,4 +450,58 @@ public class CardShapeTests
 		Assert.Equal(h, fit.Y + fit.Height, 6);
 		Assert.Equal(0, fit.Y, 6);
 	}
+
+	private static SidebarLayoutResult WithCards(double height, int fullSize, int cards) =>
+		SidebarLayout.Calculate(new SidebarLayoutInput(height, fullSize, 1.6, 0, 0, 0, cards));
+
+	[Fact]
+	public void Up_to_the_full_size_number_the_cards_keep_their_size()
+	{
+		var full = WithCards(1100, 6, 0);
+
+		Assert.Equal(full, WithCards(1100, 6, 3));
+		Assert.Equal(full, WithCards(1100, 6, 6));
+	}
+
+	[Fact]
+	public void More_cards_get_smaller_and_all_of_them_fit()
+	{
+		var full = WithCards(1100, 6, 0);
+		var r = WithCards(1100, 6, 7);
+		var used = 7 * (r.ThumbnailHeight + SidebarLayout.IconRowHeight + SidebarLayout.MinCardGap) + 2 * SidebarLayout.VerticalMargin;
+
+		Assert.True(r.ThumbnailHeight < full.ThumbnailHeight);
+		Assert.True(used <= 1100 + 0.001, $"{used} > 1100");
+		Assert.False(r.IsScrolling);
+	}
+
+	[Fact]
+	public void Cards_get_no_smaller_than_the_least_size_then_the_sidebar_scrolls()
+	{
+		var full = WithCards(1100, 6, 0);
+		var r = WithCards(1100, 6, 20);
+
+		Assert.Equal(full.ThumbnailHeight * SidebarLayout.MinShrink, r.ThumbnailHeight, 3);
+		Assert.Equal(full.ThumbnailWidth * SidebarLayout.MinShrink, r.ThumbnailWidth, 3);
+		Assert.True(r.IsScrolling);
+	}
+
+	[Fact]
+	public void Smaller_cards_keep_the_aspect_ratio_and_the_sidebar_its_width()
+	{
+		var full = WithCards(1100, 6, 0);
+		var r = WithCards(1100, 6, 9);
+
+		Assert.Equal(1.6, r.ThumbnailWidth / r.ThumbnailHeight, 3);
+		Assert.Equal(full.SidebarWidth, r.SidebarWidth);
+	}
+
+	[Fact]
+	public void Fixed_thumbnails_get_smaller_as_well()
+	{
+		var r = SidebarLayout.Calculate(new SidebarLayoutInput(1100, 6, 1.6, 0, 200, 120, 30));
+
+		Assert.Equal(120 * SidebarLayout.MinShrink, r.ThumbnailHeight, 3);
+		Assert.True(r.IsScrolling);
+	}
 }

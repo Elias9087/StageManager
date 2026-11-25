@@ -208,7 +208,8 @@ public class WindowParkerTests
 			return true;
 		}
 
-		public static readonly Area MaximizedRect = new(-8, -8, 1928, 1048);
+		// maximized on the monitor (0,0,1920,1080), which has no taskbar in the fake
+		public static readonly Area MaximizedRect = new(-8, -8, 1928, 1088);
 
 		// Windows puts a maximized window back where it was
 		public bool Move(long window, Area rect, bool refreshFrame)
@@ -932,7 +933,7 @@ public class WindowParkerTests
 	{
 		var p = Create();
 		_placer.Windows[2] = (100, new Area(-1894, 0, -160, 1000), true);
-		_placer.Windows[3] = (100, new Area(-300, 0, 500, 600), false);
+		_placer.Windows[3] = (100, new Area(0, 0, 800, 600), false);
 
 		Assert.False(p.EnsureOnScreen(1));
 		Assert.False(p.EnsureOnScreen(2));
@@ -940,5 +941,85 @@ public class WindowParkerTests
 
 		p.Park(1);
 		Assert.False(p.EnsureOnScreen(1));
+	}
+
+	[Fact]
+	public void A_shown_window_that_sticks_out_a_little_is_moved_completely_onto_the_monitor()
+	{
+		var p = Create();
+		_placer.Windows[1] = (100, new Area(-300, 0, 500, 600), false);
+
+		Assert.True(p.EnsureOnScreen(1));
+
+		Assert.Equal(new Area(-8, 0, 792, 600), _placer.Windows[1].Rect);
+		Assert.Empty(_placer.Places);
+	}
+
+	[Fact]
+	public void A_shown_maximized_window_that_was_moved_is_maximized_cleanly()
+	{
+		// 25.11. 14:11:54: Claude maximized at (35,0,1971,1168) on the laptop
+		var p = Create();
+		_placer.Windows[1] = (100, new Area(35, 0, 1971, 1088), false);
+		_placer.MaximizedWindows.Add(1);
+		_placer.RestoredRects[1] = new Area(100, 100, 900, 700);
+
+		Assert.True(p.EnsureOnScreen(1));
+
+		Assert.Equal((1L, new Area(100, 100, 900, 700), true), _placer.Places[^1]);
+	}
+
+	[Fact]
+	public void A_cleanly_maximized_window_is_left_alone()
+	{
+		var p = Create();
+		_placer.Windows[1] = (100, FakePlacer.MaximizedRect, false);
+		_placer.MaximizedWindows.Add(1);
+
+		Assert.False(p.EnsureOnScreen(1));
+		Assert.Empty(_placer.Places);
+	}
+
+	[Fact]
+	public void A_window_whose_place_sticks_out_of_the_monitor_comes_back_completely_on_it()
+	{
+		// 25.11. 14:07:13: Teams came back at (990,234,2748,1079) on the laptop, half of it out of the screen
+		_placer.MonitorList.Add(new Area(1920, 0, 3840, 1080));
+		_placer.Windows[1] = (100, new Area(990, 234, 2748, 1079), false);
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+
+		_placer.MonitorList.RemoveAt(1);
+		p.Unpark(1);
+
+		Assert.Equal(new Area(170, 234, 1928, 1079), _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_window_too_high_for_the_monitor_comes_back_smaller()
+	{
+		_placer.Windows[1] = (100, new Area(844, 100, 2627, 1200), false);
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+
+		p.Unpark(1);
+
+		Assert.Equal((1L, new Area(145, 0, 1928, 1088), false), _placer.Places[^1]);
+	}
+
+	[Fact]
+	public void A_window_that_Windows_maximized_while_it_was_parked_comes_back_cleanly_maximized()
+	{
+		// 25.11. 14:11:54: Claude was parked normal, Windows maximized it at its parking spot when the monitor was unplugged
+		var p = Create();
+		p.Park(1);
+		var spot = p.ParkedRectOf(1)!.Value;
+		_placer.Windows[1] = _placer.Windows[1] with { Rect = new Area(spot.Right - 1936, 0, spot.Right, 1088) };
+		_placer.MaximizedWindows.Add(1);
+
+		p.Unpark(1);
+
+		Assert.Equal((1L, Rect, true), _placer.Places[^1]);
+		Assert.True(_placer.IsMaximized(1));
 	}
 }

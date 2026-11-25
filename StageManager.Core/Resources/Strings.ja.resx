@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>設定...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Windows と同時に起動</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>サイドバーの位置</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>サイドバーのシーン数</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>フルサイズで表示するカード数</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>デスクトップアイコン</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>常に非表示</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>変更しない</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>プレビュー</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>位置</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>サイドバーを置く画面の端です。</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>サイドバーのシーン数</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>同時に表示するシーンの数です。</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>フルサイズで表示するカード数</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>フルサイズで収まるカードの数です。シーンが増えるとカードが小さくなり、それ以上はマウスホイールでサイドバーをスクロールできます。</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>シーンあたりのウィンドウ数</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>重ねたサムネイルとして表示するシーン内のウィンドウ数です。それ以外はアイコンのみで表示されます。</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (重ねない)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>カードをステージへドラッグ</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>カードをステージへドラッグすると、そのアプリが追加されます。</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>サムネイル {0} x {1}、サイドバーの幅 {2}、画面の高さ {3} で計算。</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>このサイズでは、この画面に {1} 個中 {0} 個のシーンしか収まりません。残りは管理対象のままですが、サイドバーには表示されません。</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>このサイズでは、この画面にフルサイズで収まるカードは {1} 個中 {0} 個だけです。シーンが増えるとカードが小さくなるか、サイドバーがスクロールします。</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>シーン切り替えをアニメーション表示</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>シーンを切り替えるときのウィンドウの動きです。</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Windows の設定に従う (既定)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager はすでに実行中です。通知領域のアイコンを探してください。</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} は管理者として実行されているため、管理されません。</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>{0} のすべてのウィンドウ</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>再び管理する</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>除外したアプリ</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>クリックすると再び管理します:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>アクティブなウィンドウをシーンから切り離す</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

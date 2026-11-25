@@ -101,8 +101,16 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
-    <StackPanel
-        VerticalAlignment="Center">
+    <Grid>
+        <!-- With more scenes than fit even with smaller cards the sidebar scrolls with the mouse wheel, without a scroll bar. The
+             viewer fills the window at most: DWM draws the thumbnails into the window and only the window edges cut them off. -->
+        <ScrollViewer
+            x:Name="scenesScroll"
+            VerticalAlignment="Center"
+            VerticalScrollBarVisibility="Hidden"
+            HorizontalScrollBarVisibility="Disabled"
+            Focusable="False"
+            PanningMode="VerticalOnly">
         <ItemsControl
             Name="scenesControl"
             HorizontalAlignment="Left"
@@ -271,6 +279,7 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+        </ScrollViewer>
         <tb:TaskbarIcon
             x:Name="trayIcon"
             Visibility="Visible"
@@ -322,6 +331,9 @@
                             Click="MenuItem_Icons_Click" />
                     </MenuItem>
                     <MenuItem
+                        x:Name="menuExcluded"
+                        Header="{local:Loc Tray.ExcludedApps}" />
+                    <MenuItem
                         Header="{local:Loc Tray.Rescue}"
                         Click="MenuItem_Rescue_Click" />
                     <MenuItem
@@ -334,5 +346,5 @@
                 </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>
-    </StackPanel>
+    </Grid>
 </Window>

@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Configurações...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Iniciar com o Windows</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Posição da barra lateral</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Cenas na barra lateral</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Cartões em tamanho cheio</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Ícones da área de trabalho</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Sempre ocultos</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Nunca alterar</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Pré-visualização</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Posição</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>A borda da tela em que a barra lateral fica.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Cenas na barra lateral</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Quantas cenas são mostradas ao mesmo tempo.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Cartões em tamanho cheio</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Quantos cartões cabem em tamanho cheio. Com mais cenas os cartões ficam menores e depois a barra lateral rola com a roda do mouse.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Janelas por cena</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Janelas de uma cena mostradas como miniaturas empilhadas. As demais aparecem apenas como ícones.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (sem pilha)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Arrastar cartões para o palco</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Arraste um cartão para o palco para adicionar os aplicativos dele.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniaturas de {0} x {1}, barra lateral com {2} de largura, calculado para uma altura de tela de {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Com esse tamanho, apenas {0} de {1} cenas cabem nesta tela. As outras continuam gerenciadas, mas não aparecem na barra lateral.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Com esse tamanho, apenas {0} de {1} cartões cabem em tamanho cheio nesta tela. Com mais cenas os cartões ficam menores ou a barra lateral rola.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animar a troca de cenas</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Como as janelas se movem quando você troca de cena.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Seguir o Windows (padrão)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>O StageManager já está em execução. Procure o ícone dele na área de notificação.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} está sendo executado como administrador e não é gerenciado.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Todas as janelas de {0}</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Gerenciar novamente</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Aplicativos excluídos</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Clique em um aplicativo para gerenciá-lo novamente:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Separar a janela ativa da sua cena</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

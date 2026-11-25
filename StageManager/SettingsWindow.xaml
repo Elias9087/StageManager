@@ -721,9 +721,10 @@
                                                     </StackPanel>
                                                     <Button
                                                         Grid.Column="2"
-                                                        Style="{StaticResource RowIconButton}"
-                                                        Tag="&#xE74D;"
                                                         Margin="8,0,0,0"
+                                                        Padding="12,5"
+                                                        VerticalAlignment="Center"
+                                                        Content="{local:Loc Apps.Include}"
                                                         ToolTip="{local:Loc Apps.RemoveOne}"
                                                         AutomationProperties.Name="{local:Loc Apps.RemoveOne}"
                                                         Click="AppsDelete_Click" />

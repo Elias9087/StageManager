@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Impostazioni...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Avvia con Windows</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Posizione della barra laterale</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Scene nella barra laterale</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Schede a grandezza piena</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Icone del desktop</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Sempre nascoste</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Non modificare mai</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Anteprima</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Posizione</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>Il bordo dello schermo in cui si trova la barra laterale.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Scene nella barra laterale</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Quante scene vengono mostrate contemporaneamente.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Schede a grandezza piena</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Quante schede entrano a grandezza piena. Con più scene le schede si rimpiccioliscono, poi la barra laterale scorre con la rotellina del mouse.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Finestre per scena</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Finestre di una scena mostrate come miniature impilate. Tutte le altre appaiono solo come icone.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (nessuna pila)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Trascina le schede sul palco</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Trascina una scheda sul palco per aggiungere le sue app.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniature {0} x {1}, barra laterale larga {2}, calcolata per un&apos;altezza dello schermo di {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Con queste dimensioni su questo schermo entrano solo {0} scene su {1}. Le altre restano gestite ma non compaiono nella barra laterale.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Con queste dimensioni su questo schermo entrano a grandezza piena solo {0} schede su {1}. Con più scene le schede si rimpiccioliscono o la barra laterale scorre.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Anima i cambi di scena</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Come si muovono le finestre quando cambi scena.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Come Windows (predefinito)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager è già in esecuzione. Cerca la sua icona nell&apos;area di notifica.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} viene eseguito come amministratore e non viene gestito.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Tutte le finestre di {0}</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Gestisci di nuovo</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>App escluse</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Fai clic su un'app per gestirla di nuovo:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Stacca la finestra attiva dalla sua scena</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

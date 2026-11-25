@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Einstellungen...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Mit Windows starten</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Position der Seitenleiste</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Szenen in der Seitenleiste</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Karten in voller Grösse</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Desktopsymbole</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Immer ausgeblendet</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Nie ändern</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Vorschau</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Position</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>Der Bildschirmrand, an dem die Seitenleiste sitzt.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Szenen in der Seitenleiste</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Wie viele Szenen gleichzeitig angezeigt werden.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Karten in voller Grösse</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>So viele Karten haben in voller Grösse Platz. Bei mehr Szenen werden die Karten kleiner, danach lässt sich die Seitenleiste mit dem Mausrad scrollen.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Fenster pro Szene</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Fenster einer Szene, die als gestapelte Vorschaubilder erscheinen. Alle weiteren sieht man nur als Symbole.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (kein Stapel)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Karten auf die Bühne ziehen</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Eine Karte auf die Bühne ziehen, um ihre Apps hinzuzufügen.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Vorschaubilder {0} x {1}, Seitenleiste {2} breit, berechnet für eine Bildschirmhöhe von {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Bei dieser Grösse passen nur {0} von {1} Szenen auf diesen Bildschirm. Die übrigen bleiben verwaltet, werden aber nicht in der Seitenleiste angezeigt.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Bei dieser Grösse haben auf diesem Bildschirm nur {0} von {1} Karten in voller Grösse Platz. Bei mehr Szenen werden die Karten kleiner oder die Seitenleiste scrollt.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Szenenwechsel animieren</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Wie sich die Fenster beim Wechsel der Szene bewegen.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Windows folgen (Standard)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager läuft bereits. Das Symbol findest du im Infobereich der Taskleiste.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} läuft als Administrator und wird nicht verwaltet.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Alle {0}-Fenster</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Wieder verwalten</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Ausgeschlossene Apps</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Klick auf eine App verwaltet sie wieder:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Aktives Fenster aus der Szene lösen</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Rücktaste</value></data>
 </root>

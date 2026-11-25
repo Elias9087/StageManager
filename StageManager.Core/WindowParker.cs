@@ -341,43 +341,52 @@ public sealed class WindowParker
 			return;
 
 		var monitors = _placer.Monitors();
+		var workAreas = WorkAreasOf(monitors);
 
-		// a window that came back on its own, or that the user placed on the screen, stays where it is. One still at its parking spot
-		// is not back: a monitor was plugged in there. One that is mostly out of the screen is not back either
+		// a window that came back on its own, or that the user placed on the screen, stays there, but completely on its monitor.
+		// One still at its parking spot is not back: a monitor was plugged in there. One that is mostly out of the screen is not back either
 		if (_placer.GetRect(entry.Window) is Area now && monitors.Count > 0 && ScreenFit.IsMostlyVisible(now, monitors) && !SnapGeometry.IsSame(now, entry.Parked))
-			return;
-
-		var wasMaximized = entry.Maximized || entry.MovedMaximized;
-		var lost = IsLost(entry.Original, monitors);
-
-		// the monitor it was maximized on is gone: it is maximized on one that exists
-		if (lost && wasMaximized && _placer.Place(entry.Window, ScreenFit.Fit(entry.Restored ?? entry.Original, monitors, WorkAreasOf(monitors)), maximized: true))
-			return;
-
-		// the monitor it was on may be gone, then it goes into the work area of one that exists
-		var target = Rescued(entry.Original, monitors);
-
-		// minimized while it was parked (e.g. a click on its button in the taskbar): it comes back restored, a maximized one maximized
-		if (_placer.IsMinimized(entry.Window))
 		{
-			if (wasMaximized && entry.Restored is Area restoredRect && _placer.Maximize(entry.Window, restoredRect))
-				return;
-
-			if (_placer.Normalize(entry.Window, target))
-			{
-				// a snapped window comes back where it was snapped last, that is its parking spot: it is moved from there
-				if (_placer.GetRect(entry.Window) is Area restoredAt && !SnapGeometry.IsSame(restoredAt, target, 1))
-					_placer.Move(entry.Window, target, refreshFrame: true);
-
-				return;
-			}
+			FitOnScreen(entry.Window, now, monitors, workAreas);
+			return;
 		}
 
-		// a maximized window is maximized again where it was, the placement brings it there. A move before it would arrive after it
-		if (entry.Maximized && entry.Restored is Area restored && _placer.Maximize(entry.Window, restored))
-			return;
+		var wasMaximized = entry.Maximized || entry.MovedMaximized;
+		var minimized = _placer.IsMinimized(entry.Window);
 
-		// made smaller to fit onto a monitor that exists
+		// Windows may have maximized it while it was parked, e.g. when the monitors changed
+		var maximizedNow = !minimized && _placer.IsMaximized(entry.Window);
+
+		if (wasMaximized || maximizedNow)
+		{
+			// moved as it is and still maximized as on a monitor that exists: only moved back, nothing is resized
+			if (entry.MovedMaximized && maximizedNow && ScreenFit.IsCleanlyMaximized(entry.Original, monitors, workAreas))
+			{
+				_placer.Move(entry.Window, entry.Original, refreshFrame: true);
+				return;
+			}
+
+			// maximized on a monitor that exists, with a restored rectangle that lies completely on it. A window that is maximized
+			// already has to leave that state first, Windows does not move it otherwise
+			var restored = ScreenFit.Fit(entry.Restored ?? entry.Original, monitors, workAreas);
+			if (maximizedNow ? _placer.Place(entry.Window, restored, maximized: true) : _placer.Maximize(entry.Window, restored))
+				return;
+		}
+
+		// completely on a monitor that exists, made smaller if it is too large for it
+		var target = Rescued(entry, monitors, workAreas);
+
+		// minimized while it was parked (e.g. a click on its button in the taskbar): it comes back restored
+		if (minimized && _placer.Normalize(entry.Window, target))
+		{
+			// a snapped window comes back where it was snapped last, that is its parking spot: it is moved from there
+			if (_placer.GetRect(entry.Window) is Area restoredAt && !SnapGeometry.IsSame(restoredAt, target, 1))
+				_placer.Move(entry.Window, target, refreshFrame: true);
+
+			return;
+		}
+
+		// made smaller to fit onto a monitor
 		if (ScreenFit.IsResized(entry.Original, target) && _placer.Place(entry.Window, target, maximized: false))
 			return;
 
@@ -385,8 +394,8 @@ public sealed class WindowParker
 	}
 
 	/// <summary>
-	/// Puts a shown window back onto a monitor if most of it is out of the screen, e.g. because Windows or its app moved it there when
-	/// the monitors changed. A maximized window is maximized on a monitor, the others are put into a work area. Parked windows stay.
+	/// Puts a shown window completely onto a monitor if it sticks out, e.g. because Windows or its app moved it when the monitors
+	/// changed. A maximized window is maximized cleanly on a monitor, the others are put into a work area. Parked windows stay.
 	/// </summary>
 	/// <returns>True if the window was put back.</returns>
 	public bool EnsureOnScreen(long window)
@@ -397,28 +406,39 @@ public sealed class WindowParker
 				return false;
 
 			var monitors = _placer.Monitors();
-			if (monitors.Count == 0 || ScreenFit.IsMostlyVisible(now, monitors))
-				return false;
-
-			var workAreas = WorkAreasOf(monitors);
-
-			if (_placer.IsMaximized(window))
-				return _placer.Place(window, ScreenFit.Fit(_placer.GetRestoredRect(window) ?? now, monitors, workAreas), maximized: true);
-
-			// a window of the same size is only moved, a snapped one stays snapped then
-			var target = ScreenFit.Fit(now, monitors, workAreas);
-			return ScreenFit.IsResized(now, target)
-				? _placer.Place(window, target, maximized: false)
-				: _placer.Move(window, target, refreshFrame: true);
+			return monitors.Count > 0 && FitOnScreen(window, now, monitors, WorkAreasOf(monitors));
 		}
+	}
+
+	private bool FitOnScreen(long window, Area now, IReadOnlyList<Area> monitors, IReadOnlyList<Area> workAreas)
+	{
+		if (_placer.IsMaximized(window))
+		{
+			return !ScreenFit.IsCleanlyMaximized(now, monitors, workAreas)
+				&& _placer.Place(window, ScreenFit.Fit(_placer.GetRestoredRect(window) ?? now, monitors, workAreas), maximized: true);
+		}
+
+		var target = ScreenFit.Fit(now, monitors, workAreas);
+		if (SnapGeometry.IsSame(target, now, 1))
+			return false;
+
+		// a window of the same size is only moved, a snapped one stays snapped then
+		return ScreenFit.IsResized(now, target)
+			? _placer.Place(window, target, maximized: false)
+			: _placer.Move(window, target, refreshFrame: true);
 	}
 
 	/// <summary>True if less than half of the window would be on a monitor.</summary>
 	private static bool IsLost(Area rect, IReadOnlyList<Area> monitors) => monitors.Count > 0 && !ScreenFit.IsMostlyVisible(rect, monitors);
 
-	/// <summary>Where a window goes back to: where it was, or into the work area of a monitor if that place is mostly on none any more.</summary>
-	private Area Rescued(Area original, IReadOnlyList<Area> monitors) =>
-		IsLost(original, monitors) ? ScreenFit.Fit(original, monitors, WorkAreasOf(monitors)) : original;
+	/// <summary>
+	/// Where a window goes back to: completely into the work area of a monitor. A maximized one keeps its place as long as it is on a
+	/// monitor, it is maximized there again.
+	/// </summary>
+	private static Area Rescued(ParkedWindow entry, IReadOnlyList<Area> monitors, IReadOnlyList<Area> workAreas) =>
+		(entry.Maximized || entry.MovedMaximized) && !IsLost(entry.Original, monitors)
+			? entry.Original
+			: ScreenFit.Fit(entry.Original, monitors, workAreas);
 
 	private IReadOnlyList<Area> WorkAreasOf(IReadOnlyList<Area> monitors)
 	{
@@ -474,7 +494,7 @@ public sealed class WindowParker
 		if (!force && !visible && !lost)
 			return false;
 
-		var original = Rescued(entry.Original, monitors);
+		var original = Rescued(entry, monitors, WorkAreasOf(monitors));
 
 		// the spot fits the size the window has now: Windows or the app may have changed it with the monitors
 		if (ParkingSpot.Find(new Area(original.Left, original.Top, original.Left + now.Width, original.Top + now.Height), monitors) is not Area spot)

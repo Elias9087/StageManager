@@ -15,7 +15,7 @@
   <data name="Tray.Settings" xml:space="preserve"><value>Ayarlar...</value></data>
   <data name="Tray.StartWithWindows" xml:space="preserve"><value>Windows ile başlat</value></data>
   <data name="Tray.SidebarPosition" xml:space="preserve"><value>Kenar çubuğu konumu</value></data>
-  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Kenar çubuğundaki sahneler</value></data>
+  <data name="Tray.ScenesInSidebar" xml:space="preserve"><value>Tam boyutta kart sayısı</value></data>
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Masaüstü simgeleri</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Her zaman gizli</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Hiç değiştirme</value></data>
@@ -45,8 +45,8 @@
   <data name="Sidebar.Preview" xml:space="preserve"><value>Önizleme</value></data>
   <data name="Sidebar.Position" xml:space="preserve"><value>Konum</value></data>
   <data name="Sidebar.PositionDesc" xml:space="preserve"><value>Kenar çubuğunun bulunduğu ekran kenarı.</value></data>
-  <data name="Sidebar.Scenes" xml:space="preserve"><value>Kenar çubuğundaki sahneler</value></data>
-  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Aynı anda kaç sahnenin gösterileceği.</value></data>
+  <data name="Sidebar.Scenes" xml:space="preserve"><value>Tam boyutta kart sayısı</value></data>
+  <data name="Sidebar.ScenesDesc" xml:space="preserve"><value>Tam boyutta kaç kartın sığdığı. Daha fazla sahnede kartlar küçülür, ardından kenar çubuğu fare tekerleğiyle kaydırılır.</value></data>
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Sahne başına pencere</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Bir sahnenin üst üste dizilmiş küçük resim olarak gösterilen pencereleri. Diğerleri yalnızca simge olarak görünür.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (yığın yok)</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Kartları sahneye sürükle</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Uygulamalarını eklemek için bir kartı sahneye sürükleyin.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Küçük resimler {0} x {1}, kenar çubuğu {2} genişliğinde, {3} ekran yüksekliğine göre hesaplandı.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Bu boyutta bu ekrana {1} sahneden yalnızca {0} tanesi sığıyor. Diğerleri yönetilmeye devam eder ancak kenar çubuğunda gösterilmez.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Bu boyutta bu ekrana {1} karttan yalnızca {0} tanesi tam boyutta sığıyor. Daha fazla sahnede kartlar küçülür veya kenar çubuğu kayar.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Sahne değişimlerini canlandır</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Sahne değiştirirken pencerelerin nasıl hareket edeceği.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Windows&apos;u izle (varsayılan)</value></data>
@@ -125,4 +125,9 @@
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager zaten çalışıyor. Simgesini bildirim alanında arayın.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} yönetici olarak çalışıyor ve yönetilmiyor.</value></data>
   <data name="Card.SeparateApp" xml:space="preserve"><value>Tüm {0} pencereleri</value></data>
+  <data name="Apps.Include" xml:space="preserve"><value>Yeniden yönet</value></data>
+  <data name="Tray.ExcludedApps" xml:space="preserve"><value>Hariç tutulan uygulamalar</value></data>
+  <data name="Tray.ExcludedHint" xml:space="preserve"><value>Yeniden yönetmek için bir uygulamaya tıklayın:</value></data>
+  <data name="Keyboard.Detach" xml:space="preserve"><value>Etkin pencereyi sahnesinden ayır</value></data>
+  <data name="Key.Backspace" xml:space="preserve"><value>Backspace</value></data>
 </root>

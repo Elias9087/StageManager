@@ -23,7 +23,10 @@ public enum HotkeyActionKind
 	Previous,
 
 	/// <summary>The card at a position of the sidebar.</summary>
-	Number
+	Number,
+
+	/// <summary>The active window leaves the stage and gets a card of its own.</summary>
+	Detach
 }
 
 /// <param name="Number">For <see cref="HotkeyActionKind.Number"/> the position of the card, starting at 1.</param>
@@ -31,6 +34,7 @@ public readonly record struct HotkeyAction(HotkeyActionKind Kind, int Number = 0
 {
 	public static readonly HotkeyAction Next = new(HotkeyActionKind.Next);
 	public static readonly HotkeyAction Previous = new(HotkeyActionKind.Previous);
+	public static readonly HotkeyAction Detach = new(HotkeyActionKind.Detach);
 
 	public static HotkeyAction Card(int number) => new(HotkeyActionKind.Number, number);
 
@@ -44,6 +48,12 @@ public static class HotkeyText
 	public const HotkeyModifiers Default = HotkeyModifiers.Ctrl | HotkeyModifiers.Alt | HotkeyModifiers.Win;
 
 	public const int MaxNumber = 9;
+
+	/// <summary>
+	/// The key that detaches the active window, together with the held keys. Windows has no shortcut with Backspace and the Windows
+	/// key, and Ctrl+Alt+Backspace is free as well (unlike Ctrl+Alt+Delete).
+	/// </summary>
+	public const string DetachKey = "Backspace";
 
 	private static readonly (HotkeyModifiers Flag, string Name)[] Names =
 	{
@@ -105,6 +115,7 @@ public static class HotkeyText
 		{
 			HotkeyActionKind.Next => $"{Format(modifiers, name)}+{tab}",
 			HotkeyActionKind.Previous => $"{Format(modifiers, name)}+{shift}+{tab}",
+			HotkeyActionKind.Detach => $"{Format(modifiers, name)}+{name?.Invoke(DetachKey) ?? DetachKey}",
 			_ => $"{Format(modifiers, name)}+{action.Number}"
 		};
 	}
@@ -137,6 +148,9 @@ public static class HotkeyAdvice
 {
 	public static HotkeyOwner KnownOwner(HotkeyModifiers modifiers, HotkeyAction action)
 	{
+		if (action.Kind == HotkeyActionKind.Detach)
+			return HotkeyOwner.Unknown;
+
 		var tab = action.Kind != HotkeyActionKind.Number;
 
 		return (modifiers, tab) switch
