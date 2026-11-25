@@ -34,10 +34,19 @@ public interface IWindowPlacer
 	/// <summary>Moves the window so that its top left corner is at the one of <paramref name="rect"/>. The size does not change.</summary>
 	bool Move(long window, Area rect, bool refreshFrame);
 
+	/// <summary>
+	/// Puts the window at <paramref name="rect"/>, in screen coordinates and with that size. With <paramref name="maximized"/> it is
+	/// maximized on the monitor of <paramref name="rect"/>, which it gets back when it is restored. To rescue a window that is out of reach.
+	/// </summary>
+	bool Place(long window, Area rect, bool maximized);
+
 	/// <summary>Visible windows that belong to the window, like dialogs.</summary>
 	IReadOnlyList<long> OwnedWindows(long window);
 
 	IReadOnlyList<Area> Monitors();
+
+	/// <summary>The work area of each monitor, in the order of <see cref="Monitors"/>. Where a window goes whose monitor is gone.</summary>
+	IReadOnlyList<Area> WorkAreas() => Monitors();
 }
 
 /// <summary>A window that was moved out of the screen and has to be brought back.</summary>
@@ -61,6 +70,9 @@ public sealed record ParkedWindow
 
 	/// <summary>The rectangle a maximized window gets when it is restored, null for other windows.</summary>
 	public Area? Restored { get; init; }
+
+	/// <summary>The window was maximized and moved as it is (<see cref="MaximizedParking.MoveMaximized"/>). It is maximized again if it gets minimized meanwhile.</summary>
+	public bool MovedMaximized { get; init; }
 }
 
 /// <summary>Remembers parked windows, so they come back even if the app was killed.</summary>
@@ -214,18 +226,18 @@ public sealed class WindowParker
 			var dx = spot.Left - rect.Left;
 			var dy = spot.Top - rect.Top;
 
-			// with Normalize a maximized window leaves that state before it is moved and is maximized again when it comes back
-			var maximized = _placer.IsMaximized(window);
+			// with Normalize a maximized window leaves that state before it is moved and is maximized again when it comes back.
+			// Moved as it is, it keeps the maximized state on its own and only has to be moved back
+			var isMaximized = _placer.IsMaximized(window);
+			var maximized = isMaximized && _maximizedParking == MaximizedParking.Normalize;
+			var movedMaximized = isMaximized && !maximized;
 
-			// moved as it is: it keeps the maximized state on its own and only has to be moved back
-			if (maximized && _maximizedParking == MaximizedParking.MoveMaximized)
-				maximized = false;
-
-			Area? restored = null;
-			if (maximized && (restored = _placer.GetRestoredRect(window)) is null)
+			// the restored rectangle is needed to maximize it again, also when a window moved as it is was minimized while it was parked
+			var restored = isMaximized ? _placer.GetRestoredRect(window) : null;
+			if (maximized && restored is null)
 				return false;
 
-			var parked = new List<ParkedWindow> { Entry(window, processId, 0, rect, spot) with { Maximized = maximized, Restored = restored } };
+			var parked = new List<ParkedWindow> { Entry(window, processId, 0, rect, spot) with { Maximized = maximized, Restored = restored, MovedMaximized = movedMaximized } };
 
 			foreach (var owned in _placer.OwnedWindows(window))
 			{
@@ -328,16 +340,166 @@ public sealed class WindowParker
 		if (!_placer.Exists(entry.Window, entry.ProcessId))
 			return;
 
-		// a window that came back on its own, or that the user placed on the screen, stays where it is
-		if (_placer.GetRect(entry.Window) is Area now && _placer.Monitors().Any(m => FlightPlanner.Intersects(m, now)))
+		var monitors = _placer.Monitors();
+
+		// a window that came back on its own, or that the user placed on the screen, stays where it is. One still at its parking spot
+		// is not back: a monitor was plugged in there. One that is mostly out of the screen is not back either
+		if (_placer.GetRect(entry.Window) is Area now && monitors.Count > 0 && ScreenFit.IsMostlyVisible(now, monitors) && !SnapGeometry.IsSame(now, entry.Parked))
 			return;
+
+		var wasMaximized = entry.Maximized || entry.MovedMaximized;
+		var lost = IsLost(entry.Original, monitors);
+
+		// the monitor it was maximized on is gone: it is maximized on one that exists
+		if (lost && wasMaximized && _placer.Place(entry.Window, ScreenFit.Fit(entry.Restored ?? entry.Original, monitors, WorkAreasOf(monitors)), maximized: true))
+			return;
+
+		// the monitor it was on may be gone, then it goes into the work area of one that exists
+		var target = Rescued(entry.Original, monitors);
+
+		// minimized while it was parked (e.g. a click on its button in the taskbar): it comes back restored, a maximized one maximized
+		if (_placer.IsMinimized(entry.Window))
+		{
+			if (wasMaximized && entry.Restored is Area restoredRect && _placer.Maximize(entry.Window, restoredRect))
+				return;
+
+			if (_placer.Normalize(entry.Window, target))
+			{
+				// a snapped window comes back where it was snapped last, that is its parking spot: it is moved from there
+				if (_placer.GetRect(entry.Window) is Area restoredAt && !SnapGeometry.IsSame(restoredAt, target, 1))
+					_placer.Move(entry.Window, target, refreshFrame: true);
+
+				return;
+			}
+		}
 
 		// a maximized window is maximized again where it was, the placement brings it there. A move before it would arrive after it
 		if (entry.Maximized && entry.Restored is Area restored && _placer.Maximize(entry.Window, restored))
 			return;
 
-		_placer.Move(entry.Window, entry.Original, refreshFrame: true);
+		// made smaller to fit onto a monitor that exists
+		if (ScreenFit.IsResized(entry.Original, target) && _placer.Place(entry.Window, target, maximized: false))
+			return;
+
+		_placer.Move(entry.Window, target, refreshFrame: true);
 	}
+
+	/// <summary>
+	/// Puts a shown window back onto a monitor if most of it is out of the screen, e.g. because Windows or its app moved it there when
+	/// the monitors changed. A maximized window is maximized on a monitor, the others are put into a work area. Parked windows stay.
+	/// </summary>
+	/// <returns>True if the window was put back.</returns>
+	public bool EnsureOnScreen(long window)
+	{
+		lock (_lock)
+		{
+			if (_entries.Any(e => e.Window == window) || _placer.IsMinimized(window) || _placer.GetRect(window) is not Area now)
+				return false;
+
+			var monitors = _placer.Monitors();
+			if (monitors.Count == 0 || ScreenFit.IsMostlyVisible(now, monitors))
+				return false;
+
+			var workAreas = WorkAreasOf(monitors);
+
+			if (_placer.IsMaximized(window))
+				return _placer.Place(window, ScreenFit.Fit(_placer.GetRestoredRect(window) ?? now, monitors, workAreas), maximized: true);
+
+			// a window of the same size is only moved, a snapped one stays snapped then
+			var target = ScreenFit.Fit(now, monitors, workAreas);
+			return ScreenFit.IsResized(now, target)
+				? _placer.Place(window, target, maximized: false)
+				: _placer.Move(window, target, refreshFrame: true);
+		}
+	}
+
+	/// <summary>True if less than half of the window would be on a monitor.</summary>
+	private static bool IsLost(Area rect, IReadOnlyList<Area> monitors) => monitors.Count > 0 && !ScreenFit.IsMostlyVisible(rect, monitors);
+
+	/// <summary>Where a window goes back to: where it was, or into the work area of a monitor if that place is mostly on none any more.</summary>
+	private Area Rescued(Area original, IReadOnlyList<Area> monitors) =>
+		IsLost(original, monitors) ? ScreenFit.Fit(original, monitors, WorkAreasOf(monitors)) : original;
+
+	private IReadOnlyList<Area> WorkAreasOf(IReadOnlyList<Area> monitors)
+	{
+		var workAreas = _placer.WorkAreas();
+		return workAreas.Count == monitors.Count ? workAreas : monitors;
+	}
+
+	/// <summary>
+	/// Parks the windows again that are not out of the screen any more after the monitors changed: a monitor was plugged in where they
+	/// were parked, or Windows moved them onto a monitor that remained. A window whose monitor is gone comes back to one that exists.
+	/// </summary>
+	/// <returns>How many windows were parked again.</returns>
+	public int Repark()
+	{
+		lock (_lock)
+		{
+			var count = 0;
+			foreach (var entry in _entries.Where(e => e.Owner == 0).ToList())
+			{
+				if (Relocate(entry, force: false))
+					count++;
+			}
+
+			if (count > 0)
+				_journal.Save(_entries);
+
+			return count;
+		}
+	}
+
+	/// <summary>Parks a window once more, e.g. because it was found on a monitor right after it was parked.</summary>
+	public bool Repark(long window)
+	{
+		lock (_lock)
+		{
+			if (_entries.FirstOrDefault(e => e.Window == window && e.Owner == 0) is not ParkedWindow entry || !Relocate(entry, force: true))
+				return false;
+
+			_journal.Save(_entries);
+			return true;
+		}
+	}
+
+	private bool Relocate(ParkedWindow entry, bool force)
+	{
+		if (!_placer.Exists(entry.Window, entry.ProcessId) || _placer.IsMinimized(entry.Window) || _placer.GetRect(entry.Window) is not Area now)
+			return false;
+
+		var monitors = _placer.Monitors();
+		var visible = monitors.Any(m => FlightPlanner.Intersects(m, now));
+		var lost = IsLost(entry.Original, monitors);
+
+		if (!force && !visible && !lost)
+			return false;
+
+		var original = Rescued(entry.Original, monitors);
+
+		// the spot fits the size the window has now: Windows or the app may have changed it with the monitors
+		if (ParkingSpot.Find(new Area(original.Left, original.Top, original.Left + now.Width, original.Top + now.Height), monitors) is not Area spot)
+			return false;
+
+		// the window moves from where it is now, the ones that belong to it the same way
+		var dx = spot.Left - now.Left;
+		var dy = spot.Top - now.Top;
+		var ox = original.Left - entry.Original.Left;
+		var oy = original.Top - entry.Original.Top;
+
+		foreach (var e in _entries.Where(e => e.Window == entry.Window || e.Owner == entry.Window).ToList())
+		{
+			var updated = e.Window == entry.Window
+				? e with { Original = original, OriginalFrame = Shift(e.OriginalFrame, ox, oy), Parked = spot }
+				: e with { Original = Shift(e.Original, ox, oy), OriginalFrame = Shift(e.OriginalFrame, ox, oy), Parked = Shift(_placer.GetRect(e.Window) ?? e.Parked, dx, dy) };
+
+			_entries[_entries.IndexOf(e)] = updated;
+			_placer.Move(updated.Window, updated.Parked, refreshFrame: false);
+		}
+
+		return true;
+	}
+
+	private static Area Shift(Area a, double dx, double dy) => new(a.Left + dx, a.Top + dy, a.Right + dx, a.Bottom + dy);
 
 	private ParkedWindow Entry(long window, int processId, long owner, Area original, Area parked) => new()
 	{

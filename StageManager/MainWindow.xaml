@@ -117,7 +117,6 @@
                         Visibility="{Binding Visibility}"
                         Style="{StaticResource SceneOpacity}"
                         Background="#01000000"
-                        PreviewMouseRightButtonDown="Card_PreviewMouseRightButtonDown"
                         MouseLeftButtonDown="Card_MouseLeftButtonDown"
                         MouseMove="Card_MouseMove"
                         MouseLeftButtonUp="Card_MouseLeftButtonUp"
@@ -126,12 +125,6 @@
                             <ContextMenu
                                 Opened="CardMenu_Opened"
                                 Closed="CardMenu_Closed">
-                                <!-- only shown after a right click on a window or its icon, and only if the card has more windows -->
-                                <MenuItem
-                                    Tag="detach"
-                                    Click="CardMenu_Click" />
-                                <Separator
-                                    Tag="detach" />
                                 <MenuItem
                                     Tag="add"
                                     Header="{local:Loc Card.AddToStage}"

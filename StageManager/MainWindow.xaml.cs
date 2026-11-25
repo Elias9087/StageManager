@@ -411,6 +411,7 @@ namespace StageManager
 		private void SystemEvents_DisplaySettingsChanged(object? sender, EventArgs e)
 		{
 			Dispatcher.BeginInvoke(PositionWindow);
+			Dispatcher.BeginInvoke(() => SceneManager?.MonitorsChanged());
 		}
 
 		private void UpdateGeometry()
@@ -1162,15 +1163,7 @@ namespace StageManager
 			if (sender is not ContextMenu menu || CardOf(menu) is not SceneModel card)
 				return;
 
-			var apps = SceneManager.AppsOf(card.Scene);
 			var canAdd = SceneManager.Current is object;
-
-			// the window that was right clicked, on the card shown by its thumbnail or its icon
-			var detach = _menuWindow is WindowModel clicked && card.Windows.Contains(clicked) && SceneManager.CanDetach(clicked.Window) ? clicked : null;
-			_detachWindow = detach;
-
-			foreach (var separator in menu.Items.OfType<Separator>().Where(s => s.Tag as string == "detach"))
-				separator.Visibility = detach is null ? Visibility.Collapsed : Visibility.Visible;
 
 			foreach (var item in menu.Items.OfType<MenuItem>())
 			{
@@ -1179,26 +1172,11 @@ namespace StageManager
 					case "add":
 						item.IsEnabled = canAdd;
 						break;
-					case "detach":
-						item.Visibility = detach is null ? Visibility.Collapsed : Visibility.Visible;
-						if (detach is object)
-						{
-							item.Header = Loc.Format("Card.DetachWindow", detach.Title);
-							item.Icon = new System.Windows.Controls.Image { Source = detach.Icon, Width = 16, Height = 16 };
-						}
-						break;
 					case "exclude":
 						FillExcludeMenu(item, card.Scene);
 						break;
 					case "split":
-						item.Items.Clear();
-						item.Visibility = apps.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-						foreach (var (key, name) in apps)
-						{
-							var sub = new MenuItem { Header = name, Tag = key };
-							sub.Click += CardMenu_Split_Click;
-							item.Items.Add(sub);
-						}
+						FillSeparateMenu(item, card);
 						break;
 				}
 			}
@@ -1249,27 +1227,105 @@ namespace StageManager
 			App.Settings.Update(s => s.Stage.ExcludedApps = ExcludedApps.With(s.Stage.ExcludedApps, entry));
 		}
 
-		private WindowModel? _menuWindow;
-		private WindowModel? _detachWindow;
-
-		/// <summary>Remembers which window of the card was right clicked: its thumbnail or its icon. The card menu can detach it.</summary>
-		private void Card_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+		/// <summary>
+		/// "Separate from group": one entry per window, numbered if titles repeat, and one for all windows of an app on a card of several
+		/// apps. Pointing at an entry dims the other windows on the card, so the window is recognized even if its title is not unique.
+		/// </summary>
+		private void FillSeparateMenu(MenuItem item, SceneModel card)
 		{
-			_menuWindow = null;
+			var windows = card.Scene.Windows.ToList();
+			var entries = SeparateMenu.Build(windows
+				.Select(w => new CardWindow(w.Handle.ToInt64(), SceneManager.GroupKeyOf(w), AppInfo.DisplayNameOf((w as WindowsWindow)?.ProcessExecutable, w.ProcessName), w.Title))
+				.ToList());
 
-			for (var element = e.OriginalSource as DependencyObject; element is not null && !ReferenceEquals(element, sender); element = VisualTreeHelper.GetParent(element))
+			item.Items.Clear();
+			item.Visibility = entries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+			var appEntries = entries.Count(e => e.Handle == 0);
+			for (var i = 0; i < entries.Count; i++)
 			{
-				if (element is FrameworkElement { DataContext: WindowModel model })
+				var entry = entries[i];
+
+				// the entries for whole apps come first, a line separates them from the windows
+				if (appEntries > 0 && i == appEntries)
+					item.Items.Add(new Separator());
+
+				var window = windows.FirstOrDefault(w => w.Handle.ToInt64() == entry.Handle);
+				var model = card.Windows.FirstOrDefault(m => m.Handle.ToInt64() == entry.Handle);
+				var appWindows = windows.Where(w => string.Equals(SceneManager.GroupKeyOf(w), entry.AppKey, StringComparison.OrdinalIgnoreCase)).ToList();
+				var path = (appWindows.FirstOrDefault() as WindowsWindow)?.ProcessExecutable;
+
+				var sub = new MenuItem
 				{
-					_menuWindow = model;
-					break;
-				}
+					Header = entry.Handle == 0 ? Loc.Format("Card.SeparateApp", entry.Label) : entry.Label,
+					Icon = model is object ? new System.Windows.Controls.Image { Source = model.Icon, Width = 16, Height = 16 } : AppIconOf(path)
+				};
+
+				sub.Click += (_, _) =>
+				{
+					HighlightOnCard(card, null);
+					if (entry.Action == SeparateAction.App)
+						SceneManager.SplitApp(card.Scene, entry.AppKey).SafeFireAndForget(ex => Log.Error("Separating an app failed", ex));
+					else if (window is object)
+						SceneManager.DetachWindow(window).SafeFireAndForget(ex => Log.Error("Detaching a window failed", ex));
+				};
+
+				var highlighted = entry.Handle == 0
+					? appWindows.Select(w => w.Handle).ToHashSet()
+					: new HashSet<IntPtr> { new IntPtr(entry.Handle) };
+
+				sub.MouseEnter += (_, _) => HighlightOnCard(card, highlighted);
+				sub.MouseLeave += (_, _) => HighlightOnCard(card, null);
+				item.Items.Add(sub);
+			}
+
+			item.SubmenuClosed -= SeparateMenu_SubmenuClosed;
+			item.SubmenuClosed += SeparateMenu_SubmenuClosed;
+		}
+
+		private SceneModel? _highlightedCard;
+
+		private void SeparateMenu_SubmenuClosed(object sender, RoutedEventArgs e)
+		{
+			if (_highlightedCard is SceneModel card)
+				HighlightOnCard(card, null);
+		}
+
+		/// <summary>Dims the windows on a card that are not among <paramref name="windows"/>. Null shows all of them as usual.</summary>
+		private void HighlightOnCard(SceneModel card, ISet<IntPtr>? windows)
+		{
+			_highlightedCard = windows is null ? null : card;
+
+			if (scenesControl.ItemContainerGenerator.ContainerFromItem(card) is not DependencyObject container)
+				return;
+
+			foreach (var thumbnail in Descendants<DwmThumbnail>(container))
+			{
+				if (windows is null || windows.Contains(thumbnail.PreviewHandle))
+					thumbnail.ClearValue(DwmThumbnail.ThumbnailOpacityProperty);
+				else
+					DwmThumbnail.SetThumbnailOpacity(thumbnail, 0.2);
+			}
+		}
+
+		private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+		{
+			for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+			{
+				var child = VisualTreeHelper.GetChild(root, i);
+				if (child is T match)
+					yield return match;
+
+				foreach (var nested in Descendants<T>(child))
+					yield return nested;
 			}
 		}
 
 		private void CardMenu_Closed(object sender, RoutedEventArgs e)
 		{
-			_menuWindow = null;
+			if (_highlightedCard is SceneModel card)
+				HighlightOnCard(card, null);
+
 			_menuOpen = false;
 		}
 
@@ -1283,20 +1339,10 @@ namespace StageManager
 				case "add":
 					SceneManager.JoinToCurrent(card.Scene).SafeFireAndForget();
 					break;
-				case "detach":
-					if (_detachWindow is WindowModel model)
-						SceneManager.DetachWindow(model.Window).SafeFireAndForget(ex => Log.Error("Detaching a window failed", ex));
-					break;
 				case "close":
 					SceneManager.CloseScene(card.Scene);
 					break;
 			}
-		}
-
-		private void CardMenu_Split_Click(object sender, RoutedEventArgs e)
-		{
-			if (sender is MenuItem { Tag: string key, Parent: MenuItem { Parent: ContextMenu menu } } && CardOf(menu) is SceneModel card)
-				SceneManager.SplitApp(card.Scene, key).SafeFireAndForget();
 		}
 
 		private void MenuItem_ProjectPage_Click(object sender, RoutedEventArgs e)

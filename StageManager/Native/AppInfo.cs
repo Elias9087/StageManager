@@ -1,3 +1,4 @@
+using StageManager.Core;
 using StageManager.Native.PInvoke;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,10 @@ namespace StageManager.Native
 		private static readonly Dictionary<string, ImageSource?> Icons = new(StringComparer.OrdinalIgnoreCase);
 		private static readonly Dictionary<string, string> Names = new(StringComparer.OrdinalIgnoreCase);
 
-		/// <summary>The name in the file properties ("Google Chrome"), or the fallback if there is none.</summary>
+		/// <summary>
+		/// The name in the file properties ("Google Chrome"). If the description there is no name ("SSH, Telnet, Rlogin, and SUPDUP client"
+		/// for KiTTY) the product name, otherwise the fallback. See <see cref="AppName.Choose"/>.
+		/// </summary>
 		public static string DisplayNameOf(string? path, string fallback)
 		{
 			if (string.IsNullOrWhiteSpace(path))
@@ -34,9 +38,8 @@ namespace StageManager.Native
 
 				try
 				{
-					var description = FileVersionInfo.GetVersionInfo(path).FileDescription?.Trim();
-					if (!string.IsNullOrEmpty(description))
-						name = description;
+					var info = FileVersionInfo.GetVersionInfo(path);
+					name = AppName.Choose(info.FileDescription, info.ProductName, fallback);
 				}
 				catch (Exception)
 				{

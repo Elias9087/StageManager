@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>StageManager がデスクトップのアイコンを隠すタイミングです。macOS と同様に、デスクトップをクリックするとすべてのウィンドウが脇へ寄り、アイコンが表示されます。</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager はすでに実行中です。通知領域のアイコンを探してください。</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} は管理者として実行されているため、管理されません。</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>このウィンドウを切り離す: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>{0} のすべてのウィンドウ</value></data>
 </root>

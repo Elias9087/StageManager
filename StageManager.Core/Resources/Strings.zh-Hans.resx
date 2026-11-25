@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>StageManager 何时隐藏桌面上的图标。与 macOS 一样，单击桌面会把所有窗口移到一旁并显示图标。</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager 已在运行。请在通知区域查找它的图标。</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} 正以管理员身份运行，不会被管理。</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>分离此窗口：{0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>所有 {0} 窗口</value></data>
 </root>

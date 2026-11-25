@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>StageManager&apos;ın masaüstündeki simgeleri ne zaman gizleyeceği. macOS&apos;taki gibi masaüstüne tıklamak tüm pencereleri kenara çeker ve simgeleri gösterir.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager zaten çalışıyor. Simgesini bildirim alanında arayın.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} yönetici olarak çalışıyor ve yönetilmiyor.</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>Bu pencereyi ayır: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>Tüm {0} pencereleri</value></data>
 </root>

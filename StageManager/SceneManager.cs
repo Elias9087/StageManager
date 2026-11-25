@@ -194,6 +194,8 @@ namespace StageManager
 					break;
 				case WindowUpdateType.MinimizeEnd:
 					HandlePossibleSnapAssistPlacement(window);
+					if (_current?.Windows.Any(w => w.Handle == window.Handle) == true)
+						EnsureOnScreenLater(new[] { window.Handle }, _current).SafeFireAndForget(ex => Log.Error("Checking the shown windows failed", ex));
 					break;
 			}
 		}
@@ -259,8 +261,7 @@ namespace StageManager
 			if (!Win32.IsWindowVisible(handle) || Win32.IsIconic(handle))
 				return false;
 
-			var rect = RectOf(handle);
-			return System.Windows.Forms.Screen.AllScreens.Any(s => FlightPlanner.Intersects(new Area(s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom), rect));
+			return Monitors.AnyIntersects(RectOf(handle));
 		}
 
 		/// <summary>Gives the focus to the front window of the stage that is on the screen.</summary>
@@ -313,15 +314,28 @@ namespace StageManager
 			}
 		}
 
+		// windows that left the screen at a check: Windows lets StageManager move them, they are never given up
+		private readonly HashSet<IntPtr> _parkedOnce = new();
+
+		// windows a check found still at their place, they were parked once more and are checked again
+		private readonly HashSet<IntPtr> _refusedOnce = new();
+
+		private DateTime _monitorsChangedAt = DateTime.MinValue;
+
+		private bool MonitorsChangedLately => DateTime.UtcNow - _monitorsChangedAt < ParkCheck.MonitorSettleTime;
+
 		/// <summary>
 		/// Windows of apps that run with more rights than StageManager do not move (UIPI) and would stay over every other scene. They are
 		/// recognized at start, this catches the ones that were not: a parked window still at its place is not managed any more.
+		/// Only one that really never moves: see <see cref="ParkCheck.FollowUp"/>. The others are parked once more.
 		/// </summary>
-		/// <remarks>Runs once, shortly after the windows were parked by a switch, and compares where they are with their parking spot.</remarks>
-		private async Task AbandonWindowsThatRefusedToMove(IReadOnlyList<IntPtr> parked)
+		/// <remarks>Runs shortly after the windows were parked by a switch, and compares where they are with their parking spot.</remarks>
+		private async Task CheckParkedWindows(IReadOnlyList<IntPtr> parked, int delayMilliseconds = 500)
 		{
 			// the move is asynchronous
-			await Task.Delay(500).ConfigureAwait(true);
+			await Task.Delay(delayMilliseconds).ConfigureAwait(true);
+
+			var again = new List<IntPtr>();
 
 			foreach (var handle in parked)
 			{
@@ -332,13 +346,95 @@ namespace StageManager
 					continue;
 
 				var now = RectOf(handle);
-				if (!Elevation.RefusedToMove(original, spot, now, ProcessInfo.IsHung(handle)))
+				var outcome = ParkCheck.Check(original, spot, now, Monitors.Bounds(), ProcessInfo.IsHung(handle));
+				var refusedBefore = _refusedOnce.Contains(handle);
+				var followUp = ParkCheck.FollowUp(outcome, _parkedOnce.Contains(handle), MonitorsChangedLately, refusedBefore);
+
+				switch (followUp)
+				{
+					case ParkFollowUp.None:
+						_parkedOnce.Add(handle);
+						_refusedOnce.Remove(handle);
+						break;
+
+					case ParkFollowUp.Repark:
+						// parked on a monitor that was not known when the spot was chosen, or moved back by Windows: once more
+						var parkedAgain = Parking.Repark(handle);
+						DebugLog.Write("REPARK", $"{DebugLog.Describe(handle)} {outcome}: spot={Text(spot)} now={Text(now)}, parked again: {parkedAgain} at {(Parking.ParkedRectOf(handle) is Area at ? Text(at) : "-")}");
+
+						// a refusal is checked once more, a second one in a row gives the window up (if it never moved)
+						if (outcome == ParkOutcome.Refused && !refusedBefore)
+						{
+							_refusedOnce.Add(handle);
+							again.Add(handle);
+						}
+						break;
+
+					case ParkFollowUp.Abandon:
+						DebugLog.Write("REFUSED", $"{DebugLog.Describe(handle)} did not move when it was parked, twice: original={Text(original)} spot={Text(spot)} now={Text(now)}, it is not managed any more");
+						_refusedOnce.Remove(handle);
+						Parking.Forget(handle);
+						WindowsManager.Abandon(handle);
+						break;
+				}
+			}
+
+			if (again.Count > 0)
+				await CheckParkedWindows(again, 1000).ConfigureAwait(true);
+		}
+
+		/// <summary>
+		/// Windows that were brought back may still be mostly out of the screen: a snapped window restored from minimized comes back where
+		/// it was parked, and Windows or the app may have moved it when the monitors changed. They are put back onto a monitor.
+		/// </summary>
+		private async Task EnsureOnScreenLater(IReadOnlyList<IntPtr> shown, Scene? scene, int delayMilliseconds = 500)
+		{
+			// moves are asynchronous, and Windows restores a window a moment after the event
+			await Task.Delay(delayMilliseconds).ConfigureAwait(true);
+
+			if (scene is null || !ReferenceEquals(_current, scene) || IsSwitching)
+				return;
+
+			foreach (var handle in shown)
+			{
+				if (!Win32.IsWindow(handle) || !Win32.IsWindowVisible(handle))
 					continue;
 
-				DebugLog.Write("REFUSED", $"{DebugLog.Describe(handle)} did not move when it was parked: original={Text(original)} spot={Text(spot)} now={Text(now)}, it is not managed any more");
-				Parking.Forget(handle);
-				WindowsManager.Abandon(handle);
+				var before = RectOf(handle);
+				if (Parking.EnsureOnScreen(handle))
+					DebugLog.Write("ONSCREEN", $"{DebugLog.Describe(handle)} was mostly out of the screen at {Text(before)}, put back: {DebugLog.State(handle)}");
 			}
+		}
+
+		private System.Windows.Threading.DispatcherTimer? _monitorsChangedTimer;
+
+		/// <summary>
+		/// A monitor was plugged in or out, or the layout of the monitors changed. Parked windows may be on a monitor now, or the monitor
+		/// they come back to may be gone: they are parked again once the monitors settled (Windows moves windows itself for a moment).
+		/// </summary>
+		public void MonitorsChanged()
+		{
+			// Windows moves windows itself now, e.g. back to where they were with these monitors: no window is given up for a while
+			_monitorsChangedAt = DateTime.UtcNow;
+
+			if (_monitorsChangedTimer is null)
+			{
+				_monitorsChangedTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+				_monitorsChangedTimer.Tick += (_, _) =>
+				{
+					_monitorsChangedTimer.Stop();
+					_monitorsChangedAt = DateTime.UtcNow;
+					DebugLog.Write("MONITORS", $"changed: {string.Join("; ", Monitors.Bounds().Select(Text))}");
+					Parking.Repark();
+
+					// the windows on the stage may have been moved out of the screen too
+					if (_current is Scene current)
+						EnsureOnScreenLater(current.Windows.Select(w => w.Handle).ToList(), current, 0).SafeFireAndForget(ex => Log.Error("Checking the shown windows failed", ex));
+				};
+			}
+
+			_monitorsChangedTimer.Stop();
+			_monitorsChangedTimer.Start();
 		}
 
 		private void WindowsManager_UntrackedFocus(object? sender, IntPtr e)
@@ -373,6 +469,10 @@ namespace StageManager
 				Parking.Unpark(window.Handle);
 			else
 				Parking.Forget(window.Handle);
+
+			// handles are reused for other windows
+			_parkedOnce.Remove(window.Handle);
+			_refusedOnce.Remove(window.Handle);
 
 			var removal = _registry.Remove(window.Handle.ToInt64());
 			if (removal.GroupId is not Guid id || !_sceneById.TryGetValue(id, out var scene))
@@ -589,7 +689,10 @@ namespace StageManager
 				FocusStageIfStranded(scene).SafeFireAndForget(ex => Log.Error("Focusing the stage failed", ex));
 
 			if (refusalCheck is { Count: > 0 })
-				AbandonWindowsThatRefusedToMove(refusalCheck).SafeFireAndForget(ex => Log.Error("Checking the parked windows failed", ex));
+				CheckParkedWindows(refusalCheck).SafeFireAndForget(ex => Log.Error("Checking the parked windows failed", ex));
+
+			if (scene is object)
+				EnsureOnScreenLater(scene.Windows.Select(w => w.Handle).ToList(), scene).SafeFireAndForget(ex => Log.Error("Checking the shown windows failed", ex));
 		}
 
 		/// <summary>TEMPORARY: the state of the windows on the stage once the switch has settled.</summary>

@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Cuándo oculta StageManager los iconos del escritorio. Como en macOS, un clic en el escritorio aparta todas las ventanas y los muestra.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager ya se está ejecutando. Busca su icono en el área de notificaciones.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} se ejecuta como administrador y no se gestiona.</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>Separar esta ventana: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>Todas las ventanas de {0}</value></data>
 </root>

@@ -172,7 +172,8 @@ namespace StageManager.Native
 			if (exStyle.HasFlag(Win32.WS_EX.WS_EX_TOOLWINDOW) && !exStyle.HasFlag(Win32.WS_EX.WS_EX_APPWINDOW))
 				return false;
 
-			if (!WindowFilter.IsCandidate(new WindowFacts(Class, ProcessName, rootWindow, minimized, bounds.Width, bounds.Height)))
+			var resizable = Win32.GetWindowStyleLongPtr(_handle).HasFlag(Win32.WS.WS_THICKFRAME);
+			if (!WindowFilter.IsCandidate(new WindowFacts(Class, ProcessName, rootWindow, minimized, bounds.Width, bounds.Height, resizable)))
 				return false;
 
 			return ignoreExclusions || !AppIdentity.IsListed(App.Settings.Current.Stage.ExcludedApps, _processExecutable);

@@ -498,9 +498,6 @@ namespace StageManager
 				target.Layout[handle] = rect;
 		}
 
-		/// <summary>True if the window can get a card of its own: it shares its card with other windows.</summary>
-		public bool CanDetach(IWindow window) => FindSceneForWindow(window) is Scene scene && scene.Windows.Count() > 1;
-
 		/// <summary>
 		/// "Detach this window" on a card: the window gets a card of its own, also if other windows of its app stay on the card. New
 		/// windows of the app still go to the card of the app. A window that leaves the stage is no longer shown.

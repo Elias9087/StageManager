@@ -171,7 +171,7 @@ public class LocalizationTests
 		try
 		{
 			Loc.SetLanguage("de");
-			Assert.Equal("Schließen", Loc.Get("Card.Close"));
+			Assert.Equal("Schliessen", Loc.Get("Card.Close"));
 			Assert.Equal("Strg", Loc.KeyName("Ctrl"));
 			Assert.Contains("3", Loc.Format("Sidebar.Limited", 3, 6));
 
@@ -200,7 +200,7 @@ public class LocalizationTests
 
 			service.Update(s => s.Language = "de");
 			Assert.Equal("de", Loc.Language);
-			Assert.Equal("Schließen", Loc.Get("Card.Close"));
+			Assert.Equal("Schliessen", Loc.Get("Card.Close"));
 
 			service.Update(s => s.Language = "xx");
 			Assert.Equal(Languages.Match(Loc.SystemCulture), Loc.Language);

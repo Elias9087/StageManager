@@ -108,6 +108,19 @@ public class ParkingSpotTests
 		Assert.Equal(0, ParkingSpot.NearestMonitor(new Area(-500, 0, -100, 100), monitors));
 		Assert.Equal(1, ParkingSpot.NearestMonitor(new Area(2100, 0, 2500, 100), monitors));
 	}
+
+	[Fact]
+	public void With_monitors_on_the_left_and_the_right_a_window_of_the_middle_one_is_parked_below_and_touches_no_monitor()
+	{
+		var monitors = new[] { new Area(0, 0, 1920, 1080), new Area(-2560, 0, 0, 1440), new Area(1920, 0, 3840, 1080) };
+		var window = new Area(300, 200, 1100, 700);
+
+		var spot = ParkingSpot.Find(window, monitors);
+
+		Assert.NotNull(spot);
+		Assert.DoesNotContain(monitors, m => FlightPlanner.Intersects(m, spot!.Value));
+		Assert.Equal(0, ParkingSpot.NearestMonitor(spot!.Value, monitors));
+	}
 }
 
 public class WindowParkerTests
@@ -148,12 +161,40 @@ public class WindowParkerTests
 			if (Hung || !Windows.ContainsKey(window))
 				return false;
 
+			// a snapped window that was minimized comes back where it was snapped, whatever the placement says
+			var at = Windows[window].Minimized && RestoresAt.TryGetValue(window, out var snapped) ? snapped : rect;
+
 			MaximizedWindows.Remove(window);
-			Windows[window] = Windows[window] with { Rect = rect };
+			Windows[window] = Windows[window] with { Rect = at, Minimized = false };
+			Normalizes.Add((window, rect));
 			return true;
 		}
 
 		public List<(long Window, Area Restored)> Maximizes { get; } = new();
+
+		public List<(long Window, Area Rect)> Normalizes { get; } = new();
+
+		public Dictionary<long, Area> RestoresAt { get; } = new();
+
+		public List<(long Window, Area Rect, bool Maximized)> Places { get; } = new();
+
+		public bool Place(long window, Area rect, bool maximized)
+		{
+			if (Hung || !Windows.ContainsKey(window))
+				return false;
+
+			Places.Add((window, rect, maximized));
+			if (maximized)
+			{
+				MaximizedWindows.Add(window);
+				RestoredRects[window] = rect;
+			}
+			else
+				MaximizedWindows.Remove(window);
+
+			Windows[window] = Windows[window] with { Rect = rect, Minimized = false };
+			return true;
+		}
 
 		public bool Maximize(long window, Area restored)
 		{
@@ -162,7 +203,7 @@ public class WindowParkerTests
 
 			MaximizedWindows.Add(window);
 			RestoredRects[window] = restored;
-			Windows[window] = Windows[window] with { Rect = MaximizedRect };
+			Windows[window] = Windows[window] with { Rect = MaximizedRect, Minimized = false };
 			Maximizes.Add((window, restored));
 			return true;
 		}
@@ -259,6 +300,7 @@ public class WindowParkerTests
 		public Area? GetRestoredRect(long window) => _inner.GetRestoredRect(window);
 		public bool Normalize(long window, Area rect) => _inner.Normalize(window, rect);
 		public bool Maximize(long window, Area restored) => _inner.Maximize(window, restored);
+		public bool Place(long window, Area rect, bool maximized) => _inner.Place(window, rect, maximized);
 		public IReadOnlyList<long> OwnedWindows(long window) => _inner.OwnedWindows(window);
 		public IReadOnlyList<Area> Monitors() => _inner.Monitors();
 
@@ -381,7 +423,8 @@ public class WindowParkerTests
 		Assert.True(_placer.IsMaximized(1));
 		Assert.True(_placer.Moves[^1].Rect.Right < 0);
 		Assert.False(_journal.Entries[0].Maximized);
-		Assert.Null(_journal.Entries[0].Restored);
+		Assert.True(_journal.Entries[0].MovedMaximized);
+		Assert.Equal(Rect, _journal.Entries[0].Restored);
 	}
 
 	[Fact]
@@ -630,5 +673,272 @@ public class WindowParkerTests
 		{
 			Directory.Delete(dir, recursive: true);
 		}
+	}
+
+	// a second monitor left of the main one, as on 24.11.: -3440 to 0, reaching above the main monitor
+	private static readonly Area LeftMonitor = new(-3440, -842, 0, 598);
+
+	[Fact]
+	public void With_a_monitor_on_the_left_a_window_of_the_main_monitor_is_parked_on_the_right_and_touches_no_monitor()
+	{
+		_placer.MonitorList.Add(LeftMonitor);
+		var p = Create();
+
+		Assert.True(p.Park(1));
+
+		var parked = _placer.Windows[1].Rect;
+		Assert.True(parked.Left >= 1920);
+		Assert.DoesNotContain(_placer.MonitorList, m => FlightPlanner.Intersects(m, parked));
+	}
+
+	[Fact]
+	public void A_monitor_plugged_in_where_windows_are_parked_makes_them_park_again()
+	{
+		var p = Create();
+		p.Park(1);
+		Assert.True(_placer.Windows[1].Rect.Right < 0);
+
+		// the docking station brings the left monitor, the parked window would be seen on it
+		_placer.MonitorList.Add(new Area(-1920, 0, 0, 1080));
+
+		Assert.Equal(1, p.Repark());
+
+		var parked = _placer.Windows[1].Rect;
+		Assert.DoesNotContain(_placer.MonitorList, m => FlightPlanner.Intersects(m, parked));
+		Assert.Equal(parked, p.ParkedRectOf(1));
+		Assert.Equal(Rect, p.OriginalRectOf(1));
+	}
+
+	[Fact]
+	public void Parked_windows_that_stay_out_of_the_screen_are_left_alone()
+	{
+		var p = Create();
+		p.Park(1);
+		var moves = _placer.Moves.Count;
+
+		Assert.Equal(0, p.Repark());
+		Assert.Equal(moves, _placer.Moves.Count);
+	}
+
+	[Fact]
+	public void A_window_whose_monitor_was_unplugged_comes_back_to_a_monitor_that_exists()
+	{
+		_placer.MonitorList.Add(new Area(-1920, 0, 0, 1080));
+		_placer.Windows[1] = (100, new Area(-1500, 200, -700, 700), false);
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+
+		_placer.MonitorList.RemoveAt(1);
+		p.Repark();
+		p.Unpark(1);
+
+		var back = _placer.Windows[1].Rect;
+		Assert.True(FlightPlanner.Intersects(_placer.MonitorList[0], back));
+		Assert.Equal(800, back.Width);
+	}
+
+	[Fact]
+	public void A_window_still_at_its_parking_spot_on_a_new_monitor_comes_back_to_where_it_was()
+	{
+		var p = Create();
+		p.Park(1);
+		_placer.MonitorList.Add(new Area(-1920, 0, 0, 1080));
+
+		Assert.True(p.Unpark(1));
+
+		Assert.Equal(Rect, _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_window_found_on_a_monitor_right_after_it_was_parked_can_be_parked_again()
+	{
+		var p = Create();
+		p.Park(1);
+		_placer.MonitorList.Add(new Area(-1920, 0, 0, 1080));
+
+		Assert.True(p.Repark(1));
+		Assert.DoesNotContain(_placer.MonitorList, m => FlightPlanner.Intersects(m, _placer.Windows[1].Rect));
+		Assert.False(p.Repark(99));
+	}
+
+	[Fact]
+	public void A_window_minimized_while_it_was_parked_comes_back_restored_where_it_was()
+	{
+		var p = Create();
+		p.Park(1);
+		_placer.Windows[1] = _placer.Windows[1] with { Minimized = true, Rect = new Area(-32000, -32000, -31840, -31972) };
+
+		Assert.True(p.Unpark(1));
+
+		Assert.False(_placer.Windows[1].Minimized);
+		Assert.Equal((1L, Rect), _placer.Normalizes[^1]);
+	}
+
+	[Fact]
+	public void A_maximized_window_minimized_while_it_was_parked_comes_back_maximized()
+	{
+		CreateMaximized(Rect);
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+		p.Park(1);
+		_placer.Windows[1] = _placer.Windows[1] with { Minimized = true, Rect = new Area(-32000, -32000, -31840, -31972) };
+		_placer.MaximizedWindows.Remove(1);
+
+		Assert.True(p.Unpark(1));
+
+		Assert.True(_placer.IsMaximized(1));
+		Assert.False(_placer.Windows[1].Minimized);
+		Assert.Equal((1L, Rect), _placer.Maximizes[^1]);
+	}
+
+	[Fact]
+	public void A_minimized_window_is_not_parked_again()
+	{
+		var p = Create();
+		p.Park(1);
+		_placer.Windows[1] = _placer.Windows[1] with { Minimized = true };
+		_placer.MonitorList.Add(new Area(-1920, 0, 0, 1080));
+
+		Assert.Equal(0, p.Repark());
+	}
+
+	[Fact]
+	public void A_snapped_window_minimized_while_it_was_parked_does_not_stay_at_its_parking_spot()
+	{
+		// 25.11. 11:57:59: Claude, snapped, came back restored at its parking spot (-1894,0,-160,1399) and stayed out of sight
+		var p = Create();
+		p.Park(1);
+		var spot = p.ParkedRectOf(1)!.Value;
+		_placer.RestoresAt[1] = spot;
+		_placer.Windows[1] = _placer.Windows[1] with { Minimized = true, Rect = new Area(-32000, -32000, -31840, -31972) };
+
+		Assert.True(p.Unpark(1));
+
+		Assert.False(_placer.Windows[1].Minimized);
+		Assert.Equal(Rect, _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_window_mostly_out_of_the_screen_did_not_come_back_on_its_own()
+	{
+		var p = Create();
+		p.Park(1);
+
+		// 100 of 800 pixels on the monitor
+		_placer.Windows[1] = _placer.Windows[1] with { Rect = new Area(-700, 200, 100, 700) };
+		Assert.True(p.Unpark(1));
+
+		Assert.Equal(Rect, _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_window_whose_place_is_mostly_on_an_unplugged_monitor_comes_back_completely_on_one_that_exists()
+	{
+		// 25.11. 12:02:46: KiTTY came back at (1746,270,2421,695) on a monitor 1920 wide
+		_placer.MonitorList.Add(new Area(1920, 0, 3840, 1080));
+		var original = new Area(1746, 270, 2421, 695);
+		_placer.Windows[1] = (100, original, false);
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+
+		_placer.MonitorList.RemoveAt(1);
+		p.Unpark(1);
+
+		var back = _placer.Windows[1].Rect;
+		Assert.Equal(new Area(1920 + ScreenFit.InvisibleBorder - 675, 270, 1920 + ScreenFit.InvisibleBorder, 695), back);
+	}
+
+	[Fact]
+	public void A_window_larger_than_the_monitor_that_remains_is_made_smaller()
+	{
+		_placer.MonitorList.Add(new Area(1920, 0, 5360, 1440));
+		_placer.Windows[1] = (100, new Area(2000, 100, 4800, 1300), false);
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+
+		_placer.MonitorList.RemoveAt(1);
+		p.Unpark(1);
+
+		var (window, rect, maximized) = _placer.Places[^1];
+		Assert.Equal(1, window);
+		Assert.False(maximized);
+		Assert.True(rect.Width <= 1920 + 2 * ScreenFit.InvisibleBorder);
+		Assert.True(rect.Height <= 1080 + ScreenFit.InvisibleBorder);
+		Assert.Equal(rect, _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_maximized_window_whose_monitor_was_unplugged_is_maximized_on_one_that_exists()
+	{
+		_placer.MonitorList.Add(new Area(1920, 0, 3840, 1080));
+		_placer.Windows[1] = (100, new Area(1912, -8, 3848, 1048), false);
+		_placer.MaximizedWindows.Add(1);
+		_placer.RestoredRects[1] = new Area(2100, 100, 2900, 700);
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+		p.Park(1);
+
+		_placer.MonitorList.RemoveAt(1);
+		p.Unpark(1);
+
+		var (window, rect, maximized) = _placer.Places[^1];
+		Assert.Equal(1, window);
+		Assert.True(maximized);
+		Assert.True(ScreenFit.IsMostlyVisible(rect, _placer.MonitorList));
+	}
+
+	[Fact]
+	public void A_window_the_monitor_change_made_larger_is_parked_again_with_its_new_size()
+	{
+		// 25.11. 12:07:06: Teams grew to 1936 pixels at its parking spot and stood on the monitor, parking it again did not move it
+		var p = Create();
+		p.Park(1);
+		var spot = p.ParkedRectOf(1)!.Value;
+		_placer.Windows[1] = _placer.Windows[1] with { Rect = new Area(spot.Left, spot.Top, spot.Left + 1936, spot.Top + 1168) };
+
+		Assert.Equal(1, p.Repark());
+
+		Assert.DoesNotContain(_placer.MonitorList, m => FlightPlanner.Intersects(m, _placer.Windows[1].Rect));
+	}
+
+	[Fact]
+	public void A_shown_window_mostly_out_of_the_screen_is_put_back_and_keeps_its_size()
+	{
+		var p = Create();
+		_placer.Windows[1] = (100, new Area(-1894, 0, -160, 1000), false);
+
+		Assert.True(p.EnsureOnScreen(1));
+
+		var back = _placer.Windows[1].Rect;
+		Assert.True(ScreenFit.IsMostlyVisible(back, _placer.MonitorList));
+		Assert.Equal(1734, back.Width);
+		Assert.Empty(_placer.Places);
+	}
+
+	[Fact]
+	public void A_shown_maximized_window_mostly_out_of_the_screen_is_maximized_on_a_monitor()
+	{
+		// 25.11. 12:02:48: Teams maximized at (-1696,259,240,1427)
+		var p = Create();
+		_placer.Windows[1] = (100, new Area(-1696, 259, 240, 1427), false);
+		_placer.MaximizedWindows.Add(1);
+		_placer.RestoredRects[1] = new Area(94, 70, 1630, 934);
+
+		Assert.True(p.EnsureOnScreen(1));
+
+		Assert.Equal((1L, new Area(94, 70, 1630, 934), true), _placer.Places[^1]);
+	}
+
+	[Fact]
+	public void Windows_on_the_screen_parked_or_minimized_are_not_put_back()
+	{
+		var p = Create();
+		_placer.Windows[2] = (100, new Area(-1894, 0, -160, 1000), true);
+		_placer.Windows[3] = (100, new Area(-300, 0, 500, 600), false);
+
+		Assert.False(p.EnsureOnScreen(1));
+		Assert.False(p.EnsureOnScreen(2));
+		Assert.False(p.EnsureOnScreen(3));
+
+		p.Park(1);
+		Assert.False(p.EnsureOnScreen(1));
 	}
 }

@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Когда StageManager скрывает значки на рабочем столе. Как в macOS, щелчок по рабочему столу отодвигает все окна и показывает значки.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager уже запущен. Его значок находится в области уведомлений.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} запущен от имени администратора и не управляется.</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>Отделить это окно: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>Все окна {0}</value></data>
 </root>

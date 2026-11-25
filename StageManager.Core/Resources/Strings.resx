@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>When StageManager hides the icons on your desktop. Like on macOS, a click on the desktop steps all windows aside and shows them.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager is running already. Look for its icon in the notification area.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} runs as administrator and is not managed.</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>Detach this window: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>All {0} windows</value></data>
 </root>

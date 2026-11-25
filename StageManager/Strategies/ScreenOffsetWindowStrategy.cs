@@ -26,6 +26,10 @@ namespace StageManager.Strategies
 				Win32.SetWindowPos(window.Handle, Win32.HWND_TOP, 0, 0, 0, 0,
 					Win32.SetWindowPosFlags.IgnoreMove | Win32.SetWindowPosFlags.IgnoreResize | Win32.SetWindowPosFlags.DoNotActivate);
 
+				// minimized while it was parked: the parker restores it, if it could not (the app hangs) it is restored here
+				if (Win32.IsIconic(window.Handle))
+					_minimize.Show(window);
+
 				DebugLog.StateNowAndLater("SHOW", "unparked", window.Handle);
 				return;
 			}

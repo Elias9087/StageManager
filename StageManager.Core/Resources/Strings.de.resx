@@ -19,12 +19,12 @@
   <data name="Tray.DesktopIcons" xml:space="preserve"><value>Desktopsymbole</value></data>
   <data name="Tray.IconsHidden" xml:space="preserve"><value>Immer ausgeblendet</value></data>
   <data name="Tray.IconsUntouched" xml:space="preserve"><value>Nie ändern</value></data>
-  <data name="Tray.Rescue" xml:space="preserve"><value>Fenster außerhalb des Bildschirms zurückholen</value></data>
+  <data name="Tray.Rescue" xml:space="preserve"><value>Fenster ausserhalb des Bildschirms zurückholen</value></data>
   <data name="Tray.ProjectPage" xml:space="preserve"><value>Projektseite</value></data>
   <data name="Tray.Quit" xml:space="preserve"><value>Beenden</value></data>
   <data name="Card.AddToStage" xml:space="preserve"><value>Zur Bühne hinzufügen</value></data>
   <data name="Card.Separate" xml:space="preserve"><value>Aus der Gruppe lösen</value></data>
-  <data name="Card.Close" xml:space="preserve"><value>Schließen</value></data>
+  <data name="Card.Close" xml:space="preserve"><value>Schliessen</value></data>
   <data name="Settings.Title" xml:space="preserve"><value>StageManager-Einstellungen</value></data>
   <data name="Settings.Applied" xml:space="preserve"><value>Änderungen werden sofort übernommen.</value></data>
   <data name="Settings.Reset" xml:space="preserve"><value>Auf Standard zurücksetzen</value></data>
@@ -50,7 +50,7 @@
   <data name="Sidebar.WindowsPerScene" xml:space="preserve"><value>Fenster pro Szene</value></data>
   <data name="Sidebar.WindowsPerSceneDesc" xml:space="preserve"><value>Fenster einer Szene, die als gestapelte Vorschaubilder erscheinen. Alle weiteren sieht man nur als Symbole.</value></data>
   <data name="Sidebar.NoStack" xml:space="preserve"><value>1 (kein Stapel)</value></data>
-  <data name="Sidebar.ThumbnailSize" xml:space="preserve"><value>Größe der Vorschaubilder</value></data>
+  <data name="Sidebar.ThumbnailSize" xml:space="preserve"><value>Grösse der Vorschaubilder</value></data>
   <data name="Sidebar.ThumbnailSizeDesc" xml:space="preserve"><value>Automatisch passt sie an die Anzahl der Szenen an.</value></data>
   <data name="Sidebar.AutoThumbnail" xml:space="preserve"><value>Automatisch (an die Anzahl der Szenen anpassen)</value></data>
   <data name="Sidebar.Width" xml:space="preserve"><value>Breite der Seitenleiste</value></data>
@@ -59,7 +59,7 @@
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Karten auf die Bühne ziehen</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Eine Karte auf die Bühne ziehen, um ihre Apps hinzuzufügen.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Vorschaubilder {0} x {1}, Seitenleiste {2} breit, berechnet für eine Bildschirmhöhe von {3}.</value></data>
-  <data name="Sidebar.Limited" xml:space="preserve"><value>Bei dieser Größe passen nur {0} von {1} Szenen auf diesen Bildschirm. Die übrigen bleiben verwaltet, werden aber nicht in der Seitenleiste angezeigt.</value></data>
+  <data name="Sidebar.Limited" xml:space="preserve"><value>Bei dieser Grösse passen nur {0} von {1} Szenen auf diesen Bildschirm. Die übrigen bleiben verwaltet, werden aber nicht in der Seitenleiste angezeigt.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Szenenwechsel animieren</value></data>
   <data name="Anim.ModeDesc" xml:space="preserve"><value>Wie sich die Fenster beim Wechsel der Szene bewegen.</value></data>
   <data name="Anim.Follow" xml:space="preserve"><value>Windows folgen (Standard)</value></data>
@@ -109,12 +109,12 @@
   <data name="Anim.Status" xml:space="preserve"><value>Dein System</value></data>
   <data name="Apps.NoneRunning" xml:space="preserve"><value>Es laufen keine weiteren Apps mit Fenstern.</value></data>
   <data name="Apps.Title" xml:space="preserve"><value>Apps, die StageManager in Ruhe lässt</value></data>
-  <data name="Apps.Add" xml:space="preserve"><value>App ausschließen</value></data>
+  <data name="Apps.Add" xml:space="preserve"><value>App ausschliessen</value></data>
   <data name="Apps.Desc" xml:space="preserve"><value>Ihre Fenster bekommen keine Karte in der Seitenleiste und werden nie ausgeblendet. Gut für Launcher, Overlays und Tray-Apps.</value></data>
   <data name="Apps.Filter" xml:space="preserve"><value>Apps</value></data>
-  <data name="Card.Exclude" xml:space="preserve"><value>Von StageManager ausschließen</value></data>
+  <data name="Card.Exclude" xml:space="preserve"><value>Von StageManager ausschliessen</value></data>
   <data name="Apps.Running" xml:space="preserve"><value>Laufende Apps</value></data>
-  <data name="Card.ExcludeApp" xml:space="preserve"><value>{0} von StageManager ausschließen</value></data>
+  <data name="Card.ExcludeApp" xml:space="preserve"><value>{0} von StageManager ausschliessen</value></data>
   <data name="Apps.Empty" xml:space="preserve"><value>Keine Apps ausgeschlossen.</value></data>
   <data name="Nav.Apps" xml:space="preserve"><value>Apps</value></data>
   <data name="Apps.Browse" xml:space="preserve"><value>App-Datei auswählen...</value></data>
@@ -124,5 +124,5 @@
   <data name="Icons.ModeDesc" xml:space="preserve"><value>Wann StageManager die Symbole auf dem Desktop ausblendet. Wie beim Mac schiebt ein Klick auf den Desktop alle Fenster beiseite und zeigt sie.</value></data>
   <data name="App.AlreadyRunning" xml:space="preserve"><value>StageManager läuft bereits. Das Symbol findest du im Infobereich der Taskleiste.</value></data>
   <data name="Hint.Elevated" xml:space="preserve"><value>{0} läuft als Administrator und wird nicht verwaltet.</value></data>
-  <data name="Card.DetachWindow" xml:space="preserve"><value>Dieses Fenster lösen: {0}</value></data>
+  <data name="Card.SeparateApp" xml:space="preserve"><value>Alle {0}-Fenster</value></data>
 </root>

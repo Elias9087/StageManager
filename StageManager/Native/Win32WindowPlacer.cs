@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 
 namespace StageManager.Native
 {
@@ -52,13 +51,40 @@ namespace StageManager.Native
 		{
 			if (ProcessInfo.IsHung(new IntPtr(window)))
 				return false;
-			// the placement is in workspace coordinates, they start at the work area of the monitor instead of the monitor
-			var screen = Screen.FromRectangle(new System.Drawing.Rectangle((int)rect.Left, (int)rect.Top, Math.Max(1, (int)rect.Width), Math.Max(1, (int)rect.Height)));
-			var dx = screen.WorkingArea.Left - screen.Bounds.Left;
-			var dy = screen.WorkingArea.Top - screen.Bounds.Top;
+			return Interop.NativeMethods.SetPlacement(new IntPtr(window), ToWorkspace(rect), maximized: false);
+		}
 
-			var normal = new Interop.RECT { left = (int)rect.Left - dx, top = (int)rect.Top - dy, right = (int)rect.Right - dx, bottom = (int)rect.Bottom - dy };
-			return Interop.NativeMethods.SetPlacement(new IntPtr(window), normal, maximized: false);
+		public bool Place(long window, Area rect, bool maximized)
+		{
+			if (ProcessInfo.IsHung(new IntPtr(window)))
+				return false;
+
+			// a maximized window is restored onto the monitor of the rectangle first: Windows maximizes it on the monitor it is on
+			var normal = ToWorkspace(rect);
+			if (!Interop.NativeMethods.SetPlacement(new IntPtr(window), normal, maximized: false))
+				return false;
+
+			return !maximized || Interop.NativeMethods.SetPlacement(new IntPtr(window), normal, maximized: true);
+		}
+
+		/// <summary>
+		/// The placement is in workspace coordinates, they start at the work area of the monitor instead of the monitor. The monitors
+		/// are read fresh: the ones of Windows Forms are cached and may be outdated right after a monitor was plugged in or out.
+		/// </summary>
+		private static Interop.RECT ToWorkspace(Area rect)
+		{
+			var monitors = StageManager.Native.Monitors.All();
+			var dx = 0.0;
+			var dy = 0.0;
+
+			if (monitors.Count > 0)
+			{
+				var monitor = monitors[ParkingSpot.NearestMonitor(rect, monitors.Select(m => m.Bounds).ToList())];
+				dx = monitor.WorkArea.Left - monitor.Bounds.Left;
+				dy = monitor.WorkArea.Top - monitor.Bounds.Top;
+			}
+
+			return new Interop.RECT { left = (int)(rect.Left - dx), top = (int)(rect.Top - dy), right = (int)(rect.Right - dx), bottom = (int)(rect.Bottom - dy) };
 		}
 
 		public bool Maximize(long window, Area restored)
@@ -106,8 +132,9 @@ namespace StageManager.Native
 			return owned;
 		}
 
-		public IReadOnlyList<Area> Monitors() =>
-			Screen.AllScreens.Select(s => new Area(s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom)).ToList();
+		public IReadOnlyList<Area> Monitors() => StageManager.Native.Monitors.Bounds();
+
+		public IReadOnlyList<Area> WorkAreas() => StageManager.Native.Monitors.All().Select(m => m.WorkArea).ToList();
 	}
 
 	/// <summary>The one parker of the app. Windows hidden by moving them out of the screen are listed in a journal on disk.</summary>
@@ -130,6 +157,21 @@ namespace StageManager.Native
 		public static Area? OriginalRectOf(IntPtr window) => Instance.Value.OriginalRectOf(window.ToInt64());
 
 		public static Area? ParkedRectOf(IntPtr window) => Instance.Value.ParkedRectOf(window.ToInt64());
+
+		/// <summary>Parks the windows again that the changed monitors put on the screen, see <see cref="WindowParker.Repark()"/>.</summary>
+		public static int Repark()
+		{
+			var count = Instance.Value.Repark();
+			if (count > 0)
+				Log.Info($"{count} parked window(s) parked again after the monitors changed");
+
+			return count;
+		}
+
+		public static bool Repark(IntPtr window) => Instance.Value.Repark(window.ToInt64());
+
+		/// <summary>Puts a shown window back onto a monitor if most of it is out of the screen, see <see cref="WindowParker.EnsureOnScreen"/>.</summary>
+		public static bool EnsureOnScreen(IntPtr window) => Instance.Value.EnsureOnScreen(window.ToInt64());
 
 		public static int RestoreAll()
 		{

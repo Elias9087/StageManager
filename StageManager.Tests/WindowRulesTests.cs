@@ -14,6 +14,26 @@ public class WindowFilterTests
 	}
 
 	[Fact]
+	public void A_dialog_of_a_fixed_size_is_ignored()
+	{
+		// "KiTTY Configuration", the session launcher
+		Assert.False(WindowFilter.IsCandidate(Normal("#32770", "kitty") with { IsResizable = false }));
+	}
+
+	[Fact]
+	public void A_dialog_that_can_be_resized_is_a_candidate()
+	{
+		Assert.True(WindowFilter.IsCandidate(Normal("#32770", "tool") with { IsResizable = true }));
+	}
+
+	[Fact]
+	public void A_window_of_a_fixed_size_that_is_no_dialog_is_a_candidate()
+	{
+		// e.g. the calculator of an app with its own window class
+		Assert.True(WindowFilter.IsCandidate(Normal("KiTTY", "kitty") with { IsResizable = false }));
+	}
+
+	[Fact]
 	public void Child_windows_are_ignored()
 	{
 		Assert.False(WindowFilter.IsCandidate(Normal() with { IsRoot = false }));

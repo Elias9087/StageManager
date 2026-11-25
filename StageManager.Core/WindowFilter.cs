@@ -7,7 +7,8 @@ public readonly record struct WindowFacts(
 	bool IsRoot,
 	bool IsMinimized,
 	int Width,
-	int Height);
+	int Height,
+	bool IsResizable = true);
 
 /// <summary>Rules which windows are left alone. Has no Win32 dependencies.</summary>
 public static class WindowFilter
@@ -44,9 +45,17 @@ public static class WindowFilter
 		"ScreenClippingHost"
 	};
 
+	/// <summary>The window class of standard dialogs of Windows.</summary>
+	public const string DialogClass = "#32770";
+
 	public static bool IsCandidate(WindowFacts window)
 	{
 		if (!window.IsRoot)
+			return false;
+
+		// a dialog of a fixed size is no window to work in, e.g. the session launcher of KiTTY or PuTTY, Win+R or the properties of a file:
+		// it would get a card of its own and take the stage only for a moment
+		if (IsFixedDialog(window))
 			return false;
 
 		if (IgnoredClasses.Contains(window.ClassName) || IgnoredProcesses.Contains(window.ProcessName))
@@ -58,4 +67,7 @@ public static class WindowFilter
 
 		return true;
 	}
+
+	public static bool IsFixedDialog(WindowFacts window) =>
+		string.Equals(window.ClassName, DialogClass, StringComparison.Ordinal) && !window.IsResizable;
 }
