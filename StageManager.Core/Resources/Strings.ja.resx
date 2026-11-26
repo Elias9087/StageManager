@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>自動 (サムネイルに合わせる)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>カードをステージへドラッグ</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>カードをステージへドラッグすると、そのアプリが追加されます。</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>ウィンドウをサイドバーへドラッグ</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>タイトルバーでウィンドウをカードへドラッグするとそのシーンに追加され、空いている場所へドラッグすると専用のカードになります。</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>サムネイル {0} x {1}、サイドバーの幅 {2}、画面の高さ {3} で計算。</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>このサイズでは、この画面にフルサイズで収まるカードは {1} 個中 {0} 個だけです。シーンが増えるとカードが小さくなるか、サイドバーがスクロールします。</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>シーン切り替えをアニメーション表示</value></data>

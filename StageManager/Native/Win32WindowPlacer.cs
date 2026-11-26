@@ -158,6 +158,9 @@ namespace StageManager.Native
 
 		public static Area? ParkedRectOf(IntPtr window) => Instance.Value.ParkedRectOf(window.ToInt64());
 
+		/// <summary>Changes where a parked window comes back to, see <see cref="WindowParker.Retarget"/>.</summary>
+		public static bool Retarget(IntPtr window, Area original) => Instance.Value.Retarget(window.ToInt64(), original);
+
 		/// <summary>Parks the windows again that the changed monitors put on the screen, see <see cref="WindowParker.Repark()"/>.</summary>
 		public static int Repark()
 		{

@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>自动（适应缩略图）</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>将卡片拖到舞台</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>将卡片拖到舞台上，即可添加其中的应用。</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>将窗口拖到侧边栏</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>按住标题栏将窗口拖到卡片上即可加入该场景，拖到空白处则为它创建单独的卡片。</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>缩略图 {0} x {1}，侧边栏宽度 {2}，按屏幕高度 {3} 计算。</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>按此大小，该屏幕只能以全尺寸容纳 {1} 张卡片中的 {0} 张。场景更多时卡片会变小或侧边栏会滚动。</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>切换场景时显示动画</value></data>

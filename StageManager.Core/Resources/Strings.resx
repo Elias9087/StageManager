@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Automatic (fit the thumbnails)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Drag cards onto the stage</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Drag a card onto the stage to add its apps to it.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Drag windows into the sidebar</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Drag a window at its title bar onto a card to add it to that scene, or onto a free place to give it a card of its own.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Thumbnails {0} x {1}, sidebar {2} wide, calculated for a screen height of {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>With this size only {0} of {1} cards have room at full size on this screen. With more scenes the cards get smaller or the sidebar scrolls.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animate scene changes</value></data>

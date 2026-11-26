@@ -1,7 +1,6 @@
 using AsyncAwaitBestPractices;
 using Microsoft.Xaml.Behaviors.Core;
 using Microsoft.Win32;
-using SharpHook;
 using StageManager.Core;
 using StageManager.Model;
 using StageManager.Native;
@@ -32,7 +31,6 @@ namespace StageManager
 		private const int TIMERINTERVAL_MILLISECONDS = 500;
 		private const string APP_NAME = "StageManager";
 		private IntPtr _thisHandle;
-		private TaskPoolGlobalHook? _hook;
 		private SidebarMode _mode;
 		// physical pixels, written on the UI thread only but read by the mouse hook and timer threads
 		private volatile SidebarGeometry _geometry = new(new Area(0, 0, 0, 0), 0, SidebarSide.Left);
@@ -40,7 +38,6 @@ namespace StageManager
 		private int _taskbarCreatedMessage;
 		private SidebarLayoutResult _layout = new(150, 100, 280, 6, false);
 		private Timer _overlapCheckTimer;
-		private Point _mouse = new Point(0, 0);
 		private SceneModel _removedCurrentScene;
 
 		// dragging a card out of the sidebar, UI thread only
@@ -54,8 +51,6 @@ namespace StageManager
 		private CardDragPreview? _dragPreview;
 		// read by the timer thread: the sidebar must not slide away while a card is dragged out of it or flies back
 		private volatile bool _dragActive;
-
-		public bool EnableWindowDropToScene = false;
 
 		// switching scenes with the keyboard, UI thread only
 		private HotkeyManager? _hotkeys;
@@ -118,7 +113,6 @@ namespace StageManager
 			App.Settings.Changed += Settings_Changed;
 			SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
 
-			StartHook();
 			StartPresence();
 			StartHotkeys();
 		}
@@ -131,8 +125,6 @@ namespace StageManager
 
 			App.Hotkeys = null;
 			_hotkeys?.Dispose();
-
-			StopHook();
 
 			trayIcon.Dispose();
 
@@ -167,6 +159,7 @@ namespace StageManager
 			SceneManager.CardScale = _dpiScale;
 			SceneManager.CardHeightOf = CardHeightOf;
 			SceneManager.SidebarHandle = _thisHandle;
+			SceneManager.WindowDropTargetAtEnd = FinishWindowDrop;
 			SceneManager.CardLanded += SceneManager_CardLanded;
 
 			SceneManager.SceneChanged += SceneManager_SceneChanged;
@@ -584,43 +577,6 @@ namespace StageManager
 			return null;
 		}
 
-		private void OnMousePressed(object? sender, MouseHookEventArgs e)
-		{
-			// only the left button drags a card
-			if (e.Data.Button != SharpHook.Native.MouseButton.Button1)
-				return;
-
-			// if it's allowed to drag windows into scenes, we cannot hide the scenes
-			if (EnableWindowDropToScene)
-				_overlapCheckTimer.Change(TimeSpan.Zero, TimeSpan.Zero);
-		}
-
-		private void OnMouseReleased(object? sender, MouseHookEventArgs e)
-		{
-			if (e.Data.Button != SharpHook.Native.MouseButton.Button1)
-				return;
-
-			// if it's allowed to drag windows into scenes, we cannot hide the scenes
-			if (EnableWindowDropToScene)
-			{
-				_overlapCheckTimer.Change(0, TIMERINTERVAL_MILLISECONDS);
-
-				var foregroundWindow = Win32.GetForegroundWindow();
-
-				if (foregroundWindow == _thisHandle)
-					return;
-
-				var screenPoint = new Point(e.Data.X, e.Data.Y);
-				this.Dispatcher.Invoke(() =>
-				{
-					var sceneModel = FindSceneByPoint(screenPoint);
-
-					if (sceneModel is object)
-						SceneManager.MoveWindow(foregroundWindow, sceneModel.Scene).SafeFireAndForget();
-				});
-			}
-		}
-
 		private const int VK_ESCAPE = 0x1B;
 
 		/// <summary>Pointer in physical screen pixels, the unit of the sidebar geometry and of window positions.</summary>
@@ -924,33 +880,6 @@ namespace StageManager
 			_dragCard = null;
 		}
 
-		private SceneModel FindSceneByPoint(Point p)
-		{
-			var thisWindow = new WindowsWindow(_thisHandle);
-			var pointOnWindow = new Point(p.X - thisWindow.Location.X, p.Y - thisWindow.Location.Y);
-
-			var dpi = VisualTreeHelper.GetDpi(this);
-
-			pointOnWindow.X /= dpi.DpiScaleX;
-			pointOnWindow.Y /= dpi.DpiScaleY;
-
-			SceneModel model = null;
-
-			var element = VisualTreeHelper.HitTest(this, pointOnWindow)?.VisualHit;
-
-			while (element is not null)
-			{
-				if (element is FrameworkElement { DataContext: SceneModel m })
-				{
-					model = m;
-					break;
-				}
-
-				element = element.GetParentObject();
-			}
-
-			return model;
-		}
 		/// <summary>
 		/// Every card is shown. With more scenes than have room at full size the cards get smaller, beyond that the sidebar scrolls.
 		/// </summary>
@@ -1027,49 +956,6 @@ namespace StageManager
 			BeginAnimation(LeftProperty, animation);
 		}
 
-		private void StartHook()
-		{
-			// a second hook would run next to the first and never be stopped
-			if (_hook is not null)
-				return;
-
-			_hook = new TaskPoolGlobalHook();
-
-			_hook.MousePressed += OnMousePressed;
-			_hook.MouseReleased += OnMouseReleased;
-			_hook.MouseMoved += _hook_MouseMoved;
-
-			Task.Run(_hook.Run);
-		}
-
-		private void StopHook()
-		{
-			var hook = _hook;
-			if (hook is null)
-				return;
-
-			_hook = null;
-			hook.MousePressed -= OnMousePressed;
-			hook.MouseReleased -= OnMouseReleased;
-			hook.MouseMoved -= _hook_MouseMoved;
-
-			try
-			{
-				hook.Dispose();
-			}
-			catch (HookException)
-			{
-			}
-		}
-
-		private void _hook_MouseMoved(object? sender, MouseHookEventArgs e)
-		{
-			// the hook only keeps the last position for the overlap check, it never calls into the UI: Windows silently removes
-			// a low level hook that answers too slowly, and then the screen edge stopped working
-			_mouse.X = e.Data.X;
-			_mouse.Y = e.Data.Y;
-		}
-
 		private volatile bool _overlapped;
 
 		private void OverlapCheck(object? _)
@@ -1109,6 +995,7 @@ namespace StageManager
 			_presenceTimer.Tick += (_, _) =>
 			{
 				UpdatePicking();
+				UpdateWindowDrop();
 				UpdatePresence();
 			};
 			_presenceTimer.Start();
@@ -1131,7 +1018,7 @@ namespace StageManager
 			// the desktop view has no windows that could cover the sidebar, but it behaves as if they did: like on macOS the sidebar steps
 			// aside and comes back at the screen edge, so the desktop and its icons are free
 			var overlapped = _overlapped || SceneManager?.IsDesktopView == true;
-			var input = new SidebarInput(cursor.X, cursor.Y, overlapped, hold, _clock.Elapsed.TotalSeconds, Summon: _picker.IsActive);
+			var input = new SidebarInput(cursor.X, cursor.Y, overlapped, hold, _clock.Elapsed.TotalSeconds, Summon: _picker.IsActive, WindowDrag: IsWindowDropPossible);
 			Mode = _presence!.Decide(Mode, input);
 
 			// a window that came to the front since may cover it, lift it above again. Not while windows fly or a card is dragged:

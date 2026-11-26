@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Automatisch (an die Vorschaubilder anpassen)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Karten auf die Bühne ziehen</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Eine Karte auf die Bühne ziehen, um ihre Apps hinzuzufügen.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Fenster in die Seitenleiste ziehen</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Ein Fenster an der Titelleiste auf eine Karte ziehen, um es dieser Szene hinzuzufügen, oder auf eine freie Stelle, damit es eine eigene Karte bekommt.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Vorschaubilder {0} x {1}, Seitenleiste {2} breit, berechnet für eine Bildschirmhöhe von {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>Bei dieser Grösse haben auf diesem Bildschirm nur {0} von {1} Karten in voller Grösse Platz. Bei mehr Szenen werden die Karten kleiner oder die Seitenleiste scrollt.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Szenenwechsel animieren</value></data>

@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Automático (según las miniaturas)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Arrastrar tarjetas al escenario</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Arrastra una tarjeta al escenario para añadir sus aplicaciones.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Arrastrar ventanas a la barra lateral</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Arrastra una ventana por su barra de título sobre una tarjeta para añadirla a esa escena, o a un espacio libre para darle su propia tarjeta.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniaturas de {0} x {1}, barra lateral de {2} de ancho, calculado para una altura de pantalla de {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>Con este tamaño solo caben {0} de {1} tarjetas a tamaño completo en esta pantalla. Con más escenas las tarjetas se reducen o la barra lateral se desplaza.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animar el cambio de escena</value></data>

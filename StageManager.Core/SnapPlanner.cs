@@ -79,7 +79,10 @@ public static class SnapPlanner
 		if (anchors.Count == 0)
 			return SnapJoinPlan.Nothing("no arranged windows on the stage");
 
-		if (anchors.Any(a => SnapGeometry.OverlapsSignificantly(window.Frame, a.Frame)))
+		// a window that spills over an arranged window, because the zone Snap Assist put it into is narrower than its smallest size,
+		// was still placed next to the layout. One snapped onto the place of a window of the stage was not
+		var spilledOver = anchors.Where(a => SnapGeometry.OverlapsSignificantly(window.Frame, a.Frame)).ToList();
+		if (spilledOver.Count > 0 && !SnapGeometry.SpillsOver(window.Frame, anchors.Select(a => a.Frame).ToList()))
 			return SnapJoinPlan.Nothing("overlaps an arranged window of the stage");
 
 		var others = candidates
@@ -92,6 +95,10 @@ public static class SnapPlanner
 
 		var all = anchors.Concat(others).Append(window).ToList();
 		var component = SnapGeometry.Connected(window, all, w => w.Frame, HandleComparer.Instance);
+
+		// the windows it spills over are its neighbours too, with the windows connected to them
+		foreach (var spilled in spilledOver.Where(s => component.All(c => c.Handle != s.Handle)))
+			component.AddRange(SnapGeometry.Connected(spilled, all, w => w.Frame, HandleComparer.Instance).Where(c => component.All(k => k.Handle != c.Handle)));
 
 		var anchorHandles = anchors.Select(a => a.Handle).ToHashSet();
 		var connectedAnchors = component.Where(c => anchorHandles.Contains(c.Handle)).Select(c => c.Handle).ToList();

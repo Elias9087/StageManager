@@ -523,6 +523,15 @@
                                 AutomationProperties.Name="{local:Loc Sidebar.DragToStage}"
                                 Click="DragToStage_Click" />
                         </local:SettingsRow>
+                        <local:SettingsRow
+                            Title="{local:Loc Sidebar.DropWindowToCard}"
+                            Description="{local:Loc Sidebar.DropWindowToCardDesc}">
+                            <ToggleButton
+                                x:Name="dropWindowToCard"
+                                Style="{StaticResource Switch}"
+                                AutomationProperties.Name="{local:Loc Sidebar.DropWindowToCard}"
+                                Click="DropWindowToCard_Click" />
+                        </local:SettingsRow>
                     </StackPanel>
                 </ScrollViewer>
 

@@ -135,6 +135,9 @@ namespace StageManager
 
 		private void WindowsManager_WindowUpdated(IWindow window, WindowUpdateType type)
 		{
+			// the state of the windows before the user moves them, also while StageManager moves windows itself
+			TrackWindowState(window, type);
+
 			// TEMPORARY: events that matter for snap groups
 			if (type is WindowUpdateType.Foreground or WindowUpdateType.MoveStart or WindowUpdateType.MoveEnd
 				or WindowUpdateType.MinimizeStart or WindowUpdateType.MinimizeEnd)
@@ -148,6 +151,10 @@ namespace StageManager
 			{
 				if (type == WindowUpdateType.Foreground)
 					_focus.Activated(window.Handle.ToInt64());
+
+				// a drag that ends while StageManager moves windows itself drops nothing, but its target must not stay in the sidebar
+				if (type == WindowUpdateType.MoveEnd && _windowDrag?.Window.Handle == window.Handle)
+					AbortWindowDrag("the move ended while StageManager moved windows");
 
 				return;
 			}
@@ -183,9 +190,13 @@ namespace StageManager
 			switch (type)
 			{
 				case WindowUpdateType.MoveStart:
+					HandleWindowDragStart(window);
 					HandleSnapGroupMoveStart(window);
 					break;
 				case WindowUpdateType.MoveEnd:
+					// a window dropped into the sidebar leaves the stage, it does not leave the snap group like a moved window
+					if (HandleWindowDragEnd(window))
+						break;
 					HandleSnapGroupLocationChanged(window, isMoveEnd: true);
 					break;
 				case WindowUpdateType.LocationChanged:
@@ -471,6 +482,8 @@ namespace StageManager
 				Parking.Forget(window.Handle);
 
 			// handles are reused for other windows
+			_stageStates.Forget(window.Handle.ToInt64());
+			_snapHomes.Remove(window.Handle);
 			_parkedOnce.Remove(window.Handle);
 			_refusedOnce.Remove(window.Handle);
 
@@ -696,18 +709,27 @@ namespace StageManager
 		}
 
 		/// <summary>TEMPORARY: the state of the windows on the stage once the switch has settled.</summary>
-		private static void LogSceneLater(Scene? scene)
+		private void LogSceneLater(Scene? scene)
 		{
 			if (scene is null || !DebugLog.Enabled)
 				return;
 
-			var handles = scene.Windows.Select(w => w.Handle).ToArray();
-			Task.Run(async () =>
+			LogScene(scene).SafeFireAndForget(ex => Log.Error("Logging the stage failed", ex));
+		}
+
+		/// <summary>The windows of the scene once the switch has settled, as they are then: a window closed meanwhile is not listed.</summary>
+		private async Task LogScene(Scene scene)
+		{
+			await Task.Delay(800).ConfigureAwait(true);
+
+			if (!_scenes.Contains(scene))
 			{
-				await Task.Delay(800).ConfigureAwait(false);
-				foreach (var h in handles)
-					DebugLog.Write("STAGE", $"{DebugLog.Describe(h)} {DebugLog.State(h)}");
-			});
+				DebugLog.Write("STAGE", $"the scene is gone meanwhile");
+				return;
+			}
+
+			foreach (var w in scene.Windows.ToArray())
+				DebugLog.Write("STAGE", $"{DebugLog.Describe(w.Handle)} {DebugLog.State(w.Handle)}");
 		}
 
 		private Task _takeoff = Task.CompletedTask;
@@ -978,6 +1000,9 @@ namespace StageManager
 					WindowStrategy.Hide(window);
 				}
 
+				// a window that was part of the layout of this snap group before takes its place again if it is free
+				RejoinSnapLayout(targetScene, new[] { window });
+
 				return Task.CompletedTask;
 			}
 			finally
@@ -1042,6 +1067,9 @@ namespace StageManager
 				_scenes.Remove(source);
 				_sceneById.Remove(source.Id);
 
+				// windows that were part of the layout of this snap group before come back to their place, if it is free
+				RejoinSnapLayout(target, moving);
+
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(target, moving.FirstOrDefault(), ChangeType.Updated));
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(source, moving.FirstOrDefault(), ChangeType.Removed));
 
@@ -1093,6 +1121,9 @@ namespace StageManager
 
 				_scenes.Remove(source);
 				_sceneById.Remove(source.Id);
+
+				// windows that were part of the layout of this snap group before come back to their place, if it is free
+				RejoinSnapLayout(target, moving);
 
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(target, moving.FirstOrDefault(), ChangeType.Updated));
 				SceneChanged?.Invoke(this, new SceneChangedEventArgs(source, moving.FirstOrDefault(), ChangeType.Removed));

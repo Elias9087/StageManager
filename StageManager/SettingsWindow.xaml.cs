@@ -164,6 +164,7 @@ namespace StageManager
 				Fill(sidebarWidth, widths);
 				Select(sidebarWidth, sidebar.Width);
 				dragToStage.IsChecked = sidebar.DragToStage;
+				dropWindowToCard.IsChecked = sidebar.DropWindowToCard;
 
 				Fill(iconsMode, new[]
 				{
@@ -359,6 +360,12 @@ namespace StageManager
 		{
 			var enabled = dragToStage.IsChecked == true;
 			Change(s => s.Sidebar.DragToStage = enabled);
+		}
+
+		private void DropWindowToCard_Click(object sender, RoutedEventArgs e)
+		{
+			var enabled = dropWindowToCard.IsChecked == true;
+			Change(s => s.Sidebar.DropWindowToCard = enabled);
 		}
 
 		private void IconsMode_SelectionChanged(object sender, SelectionChangedEventArgs e)

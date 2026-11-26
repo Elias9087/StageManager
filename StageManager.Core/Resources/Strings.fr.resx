@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Automatique (selon les miniatures)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Glisser les cartes vers la scène</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Faites glisser une carte vers la scène pour y ajouter ses applications.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Glisser les fenêtres dans la barre latérale</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Faites glisser une fenêtre par sa barre de titre sur une carte pour l'ajouter à cette scène, ou sur un espace libre pour lui donner sa propre carte.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniatures de {0} x {1}, barre latérale de {2} de large, calculé pour une hauteur d&apos;écran de {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>Avec cette taille, seules {0} cartes sur {1} tiennent en pleine taille sur cet écran. Avec plus de scènes, les cartes rétrécissent ou la barre latérale défile.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Animer les changements de scène</value></data>

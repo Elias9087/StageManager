@@ -16,7 +16,9 @@ public enum SidebarMode
 /// <param name="Overlapped">A window of the stage covers the place of the sidebar (maximized or reaching far enough below it).</param>
 /// <param name="Hold">Something on the sidebar is in use (a card is dragged, a menu is open): it must not go away now.</param>
 /// <param name="Summon">The keyboard asks for the sidebar, e.g. while a scene is picked: it shows as if the pointer was at the screen edge.</param>
-public readonly record struct SidebarInput(double MouseX, double MouseY, bool Overlapped, bool Hold, double Now, bool Summon = false);
+/// <param name="WindowDrag">A window of the stage is dragged at its title bar: the whole width of the sidebar brings it back, not only the
+/// screen edge, so the window can be dropped onto a card. The screen edge itself is where Windows snaps the window.</param>
+public readonly record struct SidebarInput(double MouseX, double MouseY, bool Overlapped, bool Hold, double Now, bool Summon = false, bool WindowDrag = false);
 
 /// <summary>
 /// Decides when the sidebar shows, hides or flies over the windows. Pure logic.
@@ -44,8 +46,8 @@ public sealed class SidebarPresence
 	{
 		var area = _geometry.Area;
 		var onMonitor = input.MouseY >= area.Top && input.MouseY <= area.Bottom;
-		var atEdge = input.Summon || (onMonitor && _geometry.IsInTriggerZone(input.MouseX, _triggerZone));
 		var over = onMonitor && _geometry.IsOverSidebar(input.MouseX);
+		var atEdge = input.Summon || (onMonitor && _geometry.IsInTriggerZone(input.MouseX, _triggerZone)) || (input.WindowDrag && over);
 		var visible = current != SidebarMode.OffScreen;
 
 		if (input.Hold || atEdge || (over && visible))

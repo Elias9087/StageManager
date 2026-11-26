@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Otomatik (küçük resimlere göre)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Kartları sahneye sürükle</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Uygulamalarını eklemek için bir kartı sahneye sürükleyin.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Pencereleri kenar çubuğuna sürükle</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Bir pencereyi başlık çubuğundan bir kartın üzerine sürükleyerek o sahneye ekleyin ya da boş bir yere sürükleyerek ona ayrı bir kart verin.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Küçük resimler {0} x {1}, kenar çubuğu {2} genişliğinde, {3} ekran yüksekliğine göre hesaplandı.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>Bu boyutta bu ekrana {1} karttan yalnızca {0} tanesi tam boyutta sığıyor. Daha fazla sahnede kartlar küçülür veya kenar çubuğu kayar.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Sahne değişimlerini canlandır</value></data>

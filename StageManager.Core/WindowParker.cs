@@ -284,6 +284,34 @@ public sealed class WindowParker
 		}
 	}
 
+	/// <summary>
+	/// Changes where a parked window comes back to, e.g. to its former place in the layout of a snap group. It comes back in the normal
+	/// state with that size. A window parked maximized as it is keeps its place: it would have to leave the maximized state out of sight.
+	/// </summary>
+	/// <returns>False if the window is not parked, gone or parked maximized as it is.</returns>
+	public bool Retarget(long window, Area original)
+	{
+		lock (_lock)
+		{
+			var index = _entries.FindIndex(e => e.Window == window);
+			if (index < 0)
+				return false;
+
+			var entry = _entries[index];
+			if (!_placer.Exists(window, entry.ProcessId) || entry.MovedMaximized || _placer.IsMaximized(window))
+				return false;
+
+			// the visible frame keeps the distance to the window rectangle it has now
+			var frame = original;
+			if (_placer.GetRect(window) is Area rect && _placer.GetFrame(window) is Area now)
+				frame = new Area(original.Left + now.Left - rect.Left, original.Top + now.Top - rect.Top, original.Right + now.Right - rect.Right, original.Bottom + now.Bottom - rect.Bottom);
+
+			_entries[index] = entry with { Original = original, OriginalFrame = frame, Maximized = false, Restored = null };
+			_journal.Save(_entries);
+			return true;
+		}
+	}
+
 	/// <summary>Forgets a window that is gone, without moving anything.</summary>
 	public void Forget(long window)
 	{
@@ -386,8 +414,10 @@ public sealed class WindowParker
 			return;
 		}
 
-		// made smaller to fit onto a monitor
-		if (ScreenFit.IsResized(entry.Original, target) && _placer.Place(entry.Window, target, maximized: false))
+		// made smaller to fit onto a monitor, or it has another size than the place it comes back to (see Retarget)
+		var resized = ScreenFit.IsResized(entry.Original, target)
+			|| (_placer.GetRect(entry.Window) is Area current && ScreenFit.IsResized(current, target));
+		if (resized && _placer.Place(entry.Window, target, maximized: false))
 			return;
 
 		_placer.Move(entry.Window, target, refreshFrame: true);

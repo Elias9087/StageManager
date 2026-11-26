@@ -280,6 +280,44 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         </ScrollViewer>
+        <!-- Where a window dragged into the sidebar gets a card of its own. Above the stack of cards, so showing it moves no card. -->
+        <Canvas
+            IsHitTestVisible="False">
+            <Grid
+                x:Name="newCardPlaceholder"
+                Visibility="Collapsed">
+                <Rectangle
+                    RadiusX="10"
+                    RadiusY="10"
+                    StrokeThickness="2"
+                    StrokeDashArray="4 3">
+                    <Rectangle.Stroke>
+                        <SolidColorBrush
+                            Color="{x:Static SystemParameters.WindowGlassColor}" />
+                    </Rectangle.Stroke>
+                    <Rectangle.Fill>
+                        <SolidColorBrush
+                            Opacity="0.25"
+                            Color="{x:Static SystemParameters.WindowGlassColor}" />
+                    </Rectangle.Fill>
+                </Rectangle>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                    FontSize="22"
+                    Foreground="White"
+                    Opacity="0.9"
+                    Text="&#xE710;">
+                    <TextBlock.Effect>
+                        <DropShadowEffect
+                            BlurRadius="6"
+                            ShadowDepth="1"
+                            Opacity="0.5" />
+                    </TextBlock.Effect>
+                </TextBlock>
+            </Grid>
+        </Canvas>
         <tb:TaskbarIcon
             x:Name="trayIcon"
             Visibility="Visible"

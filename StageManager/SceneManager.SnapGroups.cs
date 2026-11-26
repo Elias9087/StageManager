@@ -618,6 +618,13 @@ namespace StageManager
 					group.Layout[w.Handle] = RectOf(w.Handle);
 			}
 
+			// the place of each window in the layout, for when it comes back after it left the group
+			foreach (var w in group.Windows)
+			{
+				if (group.Layout.TryGetValue(w.Handle, out var place))
+					_snapHomes[w.Handle] = new SnapHome(group.Id, place);
+			}
+
 			DebugLog.Write("LAYOUT", $"captured {string.Join("; ", group.Layout.Select(l => $"{DebugLog.Describe(l.Key)} {Text(l.Value)}"))}");
 		}
 

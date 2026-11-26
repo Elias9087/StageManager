@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Automatica (in base alle miniature)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Trascina le schede sul palco</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Trascina una scheda sul palco per aggiungere le sue app.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Trascina le finestre nella barra laterale</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Trascina una finestra dalla barra del titolo su una scheda per aggiungerla a quella scena, o su uno spazio libero per darle una scheda propria.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Miniature {0} x {1}, barra laterale larga {2}, calcolata per un&apos;altezza dello schermo di {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>Con queste dimensioni su questo schermo entrano a grandezza piena solo {0} schede su {1}. Con più scene le schede si rimpiccioliscono o la barra laterale scorre.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Anima i cambi di scena</value></data>

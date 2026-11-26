@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>Автоматически (по миниатюрам)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>Перетаскивать карточки на сцену</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>Перетащите карточку на сцену, чтобы добавить её приложения.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>Перетаскивать окна на боковую панель</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>Перетащите окно за заголовок на карточку, чтобы добавить его в эту сцену, или на свободное место, чтобы создать для него отдельную карточку.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>Миниатюры {0} x {1}, ширина боковой панели {2}, расчёт для высоты экрана {3}.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>При таком размере на этом экране в полном размере помещается только {0} из {1} карточек. При большем числе сцен карточки уменьшаются или боковая панель прокручивается.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>Анимировать смену сцен</value></data>

@@ -1022,4 +1022,97 @@ public class WindowParkerTests
 		Assert.Equal((1L, Rect, true), _placer.Places[^1]);
 		Assert.True(_placer.IsMaximized(1));
 	}
+
+	[Fact]
+	public void A_retargeted_window_comes_back_at_its_new_place_with_its_size()
+	{
+		var p = Create();
+		p.Park(1);
+		var snapped = new Area(0, 540, 960, 1080);
+
+		Assert.True(p.Retarget(1, snapped));
+		Assert.Equal(snapped, p.OriginalRectOf(1));
+
+		p.Unpark(1);
+
+		Assert.Equal(snapped, _placer.Windows[1].Rect);
+		Assert.Equal((1L, snapped, false), _placer.Places[^1]);
+	}
+
+	[Fact]
+	public void Retarget_keeps_the_distance_of_the_visible_frame()
+	{
+		var p = Create();
+		p.Park(1);
+		var snapped = new Area(0, 540, 960, 1080);
+
+		p.Retarget(1, snapped);
+
+		// the fake frame is 7 pixels inside at the sides and at the bottom
+		Assert.Equal(new Area(7, 540, 953, 1073), p.OriginalFrameOf(1));
+	}
+
+	[Fact]
+	public void Retarget_is_written_to_the_journal()
+	{
+		var p = Create();
+		p.Park(1);
+		var snapped = new Area(0, 540, 960, 1080);
+
+		p.Retarget(1, snapped);
+
+		Assert.Equal(snapped, _journal.Entries.Single().Original);
+	}
+
+	[Fact]
+	public void A_window_that_is_not_parked_cannot_be_retargeted()
+	{
+		var p = Create();
+
+		Assert.False(p.Retarget(1, new Area(0, 540, 960, 1080)));
+	}
+
+	[Fact]
+	public void A_window_parked_maximized_as_it_is_is_not_retargeted()
+	{
+		_placer.Windows[1] = (100, FakePlacer.MaximizedRect, false);
+		_placer.MaximizedWindows.Add(1);
+		_placer.RestoredRects[1] = Rect;
+		var p = new WindowParker(_placer, _journal, MaximizedParking.MoveMaximized);
+		p.Park(1);
+
+		Assert.False(p.Retarget(1, new Area(0, 540, 960, 1080)));
+		Assert.Equal(FakePlacer.MaximizedRect, p.OriginalRectOf(1));
+	}
+
+	[Fact]
+	public void A_window_parked_maximized_and_retargeted_comes_back_in_the_normal_state()
+	{
+		_placer.Windows[1] = (100, FakePlacer.MaximizedRect, false);
+		_placer.MaximizedWindows.Add(1);
+		_placer.RestoredRects[1] = Rect;
+		var p = new WindowParker(_placer, _journal);
+		p.Park(1);
+		var snapped = new Area(0, 540, 960, 1080);
+
+		Assert.True(p.Retarget(1, snapped));
+		p.Unpark(1);
+
+		Assert.False(_placer.IsMaximized(1));
+		Assert.Equal(snapped, _placer.Windows[1].Rect);
+	}
+
+	[Fact]
+	public void A_window_whose_size_changed_while_parked_gets_its_size_back()
+	{
+		var p = Create();
+		p.Park(1);
+		var parked = _placer.Windows[1].Rect;
+		_placer.Windows[1] = _placer.Windows[1] with { Rect = new Area(parked.Left, parked.Top, parked.Left + 500, parked.Top + 300) };
+
+		p.Unpark(1);
+
+		Assert.Equal(Rect, _placer.Windows[1].Rect);
+		Assert.Equal((1L, Rect, false), _placer.Places[^1]);
+	}
 }

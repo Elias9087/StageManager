@@ -58,6 +58,8 @@
   <data name="Sidebar.AutoWidth" xml:space="preserve"><value>자동 (축소판에 맞춤)</value></data>
   <data name="Sidebar.DragToStage" xml:space="preserve"><value>카드를 스테이지로 끌어 놓기</value></data>
   <data name="Sidebar.DragToStageDesc" xml:space="preserve"><value>카드를 스테이지로 끌어 놓으면 해당 앱이 추가됩니다.</value></data>
+  <data name="Sidebar.DropWindowToCard" xml:space="preserve"><value>창을 사이드바로 끌어 놓기</value></data>
+  <data name="Sidebar.DropWindowToCardDesc" xml:space="preserve"><value>제목 표시줄을 잡고 창을 카드로 끌어 놓으면 해당 장면에 추가되고, 빈 곳에 놓으면 별도의 카드가 생깁니다.</value></data>
   <data name="Sidebar.PreviewInfo" xml:space="preserve"><value>축소판 {0} x {1}, 사이드바 너비 {2}, 화면 높이 {3} 기준으로 계산했습니다.</value></data>
   <data name="Sidebar.Limited" xml:space="preserve"><value>이 크기에서는 이 화면에 카드 {1}개 중 {0}개만 전체 크기로 들어갑니다. 장면이 더 많으면 카드가 작아지거나 사이드바가 스크롤됩니다.</value></data>
   <data name="Anim.Mode" xml:space="preserve"><value>장면 전환에 애니메이션 사용</value></data>

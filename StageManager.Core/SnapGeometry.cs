@@ -36,6 +36,28 @@ public static class SnapGeometry
 		return overlapX > tolerance && overlapY > tolerance;
 	}
 
+	/// <summary>The most of an arranged window another window may cover and still count as placed next to it, see <see cref="SpillsOver"/>.</summary>
+	public const double MaxSpill = 1.0 / 3;
+
+	/// <summary>
+	/// True if a window placed next to arranged windows only spills over some of them: it touches one of them without covering it, and
+	/// covers less than <see cref="MaxSpill"/> of each one it overlaps. Snap Assist does that when the zone it fills is narrower than the
+	/// smallest size of the chosen window. A window snapped onto the place of another one covers most of it.
+	/// </summary>
+	/// <param name="anchors">The arranged windows the window was placed next to.</param>
+	public static bool SpillsOver(Area window, IReadOnlyList<Area> anchors, double tolerance = AdjacencyTolerance)
+	{
+		var overlapped = anchors.Where(a => OverlapsSignificantly(window, a, tolerance)).ToList();
+		if (overlapped.Count == 0)
+			return false;
+
+		var touches = anchors.Any(a => !OverlapsSignificantly(window, a, tolerance) && AreAdjacent(window, a, tolerance));
+		return touches && overlapped.All(a => OverlapArea(window, a) < MaxSpill * a.Width * a.Height);
+	}
+
+	private static double OverlapArea(Area a, Area b) =>
+		Math.Max(0, Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left)) * Math.Max(0, Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top));
+
 	/// <summary>
 	/// Compares a stored window rectangle (with the invisible borders) with a visible frame. Both shrink a little, so that windows
 	/// next to each other do not count as overlapping.
